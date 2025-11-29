@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raspberry Pi Smart Drive</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        /* --- VARIABLES & RESET --- */
+        :root {
+            --bg-color: #121212; --card-bg: #1e1e1e;
+            --accent-color: #3b82f6; --accent-hover: #2563eb;
+            --danger-color: #ef4444; --text-main: #e5e7eb; --text-muted: #9ca3af;
+            --border-color: #374151; --radius: 8px;
+        }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; line-height: 1.6; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { color: var(--accent-color); border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 25px; }
+        h3 { font-size: 1.1rem; margin-top: 0; color: var(--text-main); }
+
+        /* --- CARDS & SECTIONS --- */
+        .section-box, .upload-zone, dialog { background: var(--card-bg); border-radius: var(--radius); padding: 20px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .upload-zone { border: 2px dashed var(--border-color); text-align: center; margin-bottom: 25px; }
+        .upload-zone:hover { border-color: var(--accent-color); }
+
+        /* --- INPUTS & BUTTONS --- */
+        input[type="text"], select, input[type="file"] { background: #2d2d2d; border: 1px solid var(--border-color); color: white; padding: 10px; border-radius: var(--radius); width: 100%; box-sizing: border-box; outline: none; }
+        input[type="text"]:focus, select:focus { border-color: var(--accent-color); }
+        .input-group { display: flex; gap: 10px; margin-top: 10px; }
+
+        button, .btn-action { background-color: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: var(--radius); font-weight: 500; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s; font-family: 'Inter', sans-serif; font-size: 0.9rem;}
+        button:hover, .btn-action:hover { background-color: var(--accent-hover); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .btn-small { padding: 6px 10px; font-size: 0.85rem; }
+        .btn-danger { background: transparent; border: 1px solid var(--danger-color); color: var(--danger-color); }
+        .btn-danger:hover { background: var(--danger-color); color: white; }
+        .btn-secondary { background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); }
+        .btn-secondary:hover { border-color: var(--text-main); color: var(--text-main); }
+        .btn-icon-only { padding: 6px; }
+
+        /* --- ICONOS SVG --- */
+        .icon { width: 20px; height: 20px; fill: currentColor; }
+        .btn-small .icon { width: 16px; height: 16px; }
+
+        /* --- TABLES & TREE --- */
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem; }
+        th, td { padding: 12px; border-bottom: 1px solid #2d2d2d; text-align: left; }
+        th { color: var(--text-muted); font-weight: 500; }
+        .table-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+        .folder-node { margin-left: 15px; border-left: 1px solid #333; }
+        .folder-summary { padding: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 500; border-radius: 4px; }
+        .folder-summary:hover { background: rgba(255,255,255,0.05); color: var(--accent-color); }
+        summary::-webkit-details-marker { display: none; }
+        
+        /* --- UTILS --- */
+        .flex-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .progress-bar { background: var(--accent-color); height: 8px; border-radius: 4px; transition: width 0.3s; }
+        dialog { width: 90%; max-width: 450px; } dialog::backdrop { background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); }
+        hr { border: 0; border-top: 1px solid var(--border-color); margin: 30px 0; }
+    </style>
+</head>
+<body>
+    {# Macro de renderizado del árbol (Backend no afectado) #}
+    {% macro render_carpeta(carpeta) %}
+    <details class="folder-node">
+        <summary class="folder-summary">
+            <span>📁 {{ carpeta.nombre }}</span> 
+            <span class="file-count" style="color: var(--text-muted); font-weight: normal; margin-left: auto;">({{ carpeta.archivos|length }})</span>
+        </summary>
+        <div style="padding-left: 10px;">
+            {% for sub in carpeta.subcarpetas %} {{ render_carpeta(sub) }} {% endfor %}
+            {% if carpeta.archivos %}
+            <table style="margin-bottom: 15px;">
+                {% for archivo in carpeta.archivos %}
+                <tr>
+                    <td style="width: 60%;">📄 {{ archivo.nombre }}</td>
+                    <td style="color: var(--text-muted); text-align: right;">{{ archivo.tamano }}</td>
+                    <td style="text-align: right;">
+                        <div class="table-actions">
+                            <a href="/data/files/{{ archivo.url_descarga }}" target="_blank" class="btn-action btn-small btn-secondary btn-icon-only" title="Descargar">
+                                <svg class="icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                            </a>
+                            <button class="btn-small btn-danger btn-icon-only" onclick="borrarCatalogado('{{ archivo.url_descarga }}')" title="Eliminar">
+                                <svg class="icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% endif %}
+        </div>
+    </details>
+    {% endmacro %}
+
+    <div class="container">
+        <h1>Raspberry Drive System</h1>
+        
+        {# ESTADO #}
+        <div class="section-box">
+            <div class="flex-row">
+                <span style="color: var(--text-muted); font-weight: 600;">ESTADO ALMACENAMIENTO</span>
+                <span>{{ espacio_libre }} libre / {{ espacio_total }}</span>
+            </div>
+            <div style="background: #333; border-radius: 4px; overflow: hidden;"><div class="progress-bar" style="width: {{ porcentaje }}%;"></div></div>
+        </div>
+
+        {# SUBIDA #}
+        <div class="upload-zone">
+            <h3>Subir Archivos</h3>
+            <form id="upload-form" action="/upload" method="post" enctype="multipart/form-data">
+                <input type="file" name="files" multiple required>
+                <div style="margin-top: 15px;">
+                    <button type="submit" style="padding: 12px 24px; font-size: 1rem;">
+                        <svg class="icon" viewBox="0 0 24 24" style="width: 24px; height: 24px;"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+                        Subir Archivos
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        {# CREAR CARPETA #}
+        <div class="section-box">
+            <h3>Nueva Carpeta</h3>
+            <div class="input-group">
+                <select id="parentFolderSelect"><option value=".">Cargando...</option></select>
+                <input type="text" id="newFolderName" placeholder="Nombre de la carpeta">
+                <button onclick="crearCarpetaGlobal()">Crear</button>
+            </div>
+            <small style="color: var(--text-muted); margin-top: 5px; display: block;">Ubicación base: /mnt/midrive/files/</small>
+        </div>
+
+        {# INBOX #}
+        <h3 style="margin-top: 40px;">Bandeja de Entrada (Inbox)</h3>
+        <div class="section-box" style="padding: 0; overflow: hidden;">
+            <table style="margin-top: 0;">
+                <thead><tr><th style="padding-left: 20px;">Nombre</th><th>Tamaño</th><th style="text-align: right; padding-right: 20px;">Acciones</th></tr></thead>
+                <tbody>
+                    {% for archivo in archivos_inbox %}
+                    <tr>
+                        <td style="padding-left: 20px; font-weight: 500;">{{ archivo.nombre }}</td>
+                        <td style="color: var(--text-muted);">{{ archivo.tamano }}</td>
+                        <td style="padding-right: 20px;">
+                            <div class="table-actions">
+                                <a href="/data/inbox/{{ archivo.url_encoded }}" target="_blank" class="btn-action btn-small btn-secondary" title="Descargar">
+                                    <svg class="icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> Descargar
+                                </a>
+                                <button class="btn-small btn-secondary" onclick="moverArchivo('{{ archivo.nombre }}')">Mover</button>
+                                <button class="btn-small btn-danger btn-icon-only" onclick="borrarArchivo('{{ archivo.nombre }}')" title="Eliminar">
+                                    <svg class="icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="3" style="text-align:center; padding: 30px; color: var(--text-muted);">Inbox vacío.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <hr>
+        
+        {# ÁRBOL #}
+        <h3>Archivos Catalogados</h3>
+        <div id="file-tree-root" class="section-box">
+            {% for carpeta in arbol_archivos %} {{ render_carpeta(carpeta) }} {% else %} <p style="text-align: center; color: var(--text-muted);">No hay carpetas catalogadas.</p> {% endfor %}
+        </div>
+    </div>
+
+    {# DIALOG #}
+    <dialog id="moveDialog">
+        <h3 style="margin-bottom: 15px;">Mover Archivo</h3>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">Archivo: <strong id="modalFilename" style="color: white;"></strong></p>
+        <label style="font-size: 0.9rem;">Seleccionar Destino:</label>
+        <select id="folderSelect" style="margin-top: 5px;"></select>
+        
+        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-color);">
+            <small style="color: var(--text-muted);">¿O crear nueva carpeta aquí?</small>
+            <div class="input-group">
+                <input type="text" id="newFolderInput" placeholder="Nombre nueva carpeta...">
+                <button class="btn-secondary" onclick="crearCarpeta()">Crear</button>
+            </div>
+        </div>
+        <div style="margin-top: 25px; text-align: right; display: flex; justify-content: flex-end; gap: 10px;">
+            <button onclick="document.getElementById('moveDialog').close()" class="btn-secondary">Cancelar</button>
+            <button onclick="confirmarMover()">Confirmar Mover</button>
+        </div>
+    </dialog>
+
+    <script src="{{ url_for('static', path='js/main.js') }}"></script>
+</body>
+</html>
