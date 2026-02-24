@@ -123,7 +123,6 @@ def listar_archivos_inbox():
 
 
 def obtener_arbol_recursivo(ruta_base, ruta_relativa=""):
-    """Construye el árbol de directorios para la vista catalogada."""
     estructura = {
         "nombre": os.path.basename(ruta_base),
         "ruta_relativa": ruta_relativa,
@@ -450,3 +449,11 @@ def download_folder_zip(path: str, background_tasks: BackgroundTasks):
     except Exception as e:
         print(f"Error ZIP: {e}")
         raise HTTPException(status_code=500, detail="Error creando ZIP")
+
+@app.get("/tree-html")
+def get_tree_html(request: Request):
+    tree = obtener_arbol_recursivo(FILES_DIR)
+    return templates.TemplateResponse("tree_fragment.html", {
+        "request": request,
+        "arbol_archivos": tree["subcarpetas"]
+    })
