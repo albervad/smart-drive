@@ -1,57 +1,103 @@
 # 🍓 Raspberry Pi Smart Drive
 
-Un gestor de archivos web ligero, moderno y rápido diseñado para Raspberry Pi. Permite subir archivos, organizarlos en carpetas y gestionar tu almacenamiento USB desde cualquier navegador en tu red local.
+Gestor de archivos web ligero para Raspberry Pi. Permite subir, organizar y mover archivos en un almacenamiento montado (USB o local) desde cualquier navegador de tu red.
 
 <img width="611" height="788" alt="image" src="https://github.com/user-attachments/assets/5ba5e4e8-aa9d-4787-ae77-c98848e4fe53" />
 
 ## ✨ Características
 
-- **Dashboard Visual:** Ver uso de disco y espacio libre en tiempo real.
-- **Inbox & Clasificación:** Sube archivos a una bandeja de entrada y muévelos a carpetas organizadas.
-- **Gestión de Carpetas:** Crea carpetas y subcarpetas con ordenación inteligente.
-- **Árbol de Archivos:** Visualización jerárquica con recuento recursivo de archivos.
-- **Iconos SVG:** Interfaz limpia y moderna (Glassmorphism Dark UI).
-- **Backend Robusto:** Construido con Python (FastAPI).
+- **Dashboard de almacenamiento:** muestra espacio usado/libre y porcentaje.
+- **Subida robusta por chunks:** soporta archivos grandes con reintentos y finalización segura.
+- **Inbox + catálogo:** los archivos llegan a Inbox y se mueven al árbol de carpetas.
+- **Acciones por archivo:** **Descargar** (directo) y **Abrir** (nueva pestaña) como acciones separadas.
+- **Gestión de carpetas:** crear, renombrar, borrar carpeta vacía y descarga como ZIP.
+- **Drag & drop:** mover archivos de Inbox al catálogo soltando en carpeta destino.
+- **Backend FastAPI:** API simple y rápida para operaciones de archivos.
 
 ## 🛠️ Requisitos
 
-- Raspberry Pi (Cualquier modelo con Python 3).
-- Un pendrive o disco duro USB (recomendado).
+- Raspberry Pi con Python 3.
+- Disco/pendrive (recomendado) montado en `/mnt/midrive`.
 
-## 🚀 Instalación Rápida
+## 🚀 Instalación rápida
 
-1. **Clona este repositorio:**
+1. Clona el repositorio:
+
    ```bash
    git clone https://github.com/albervad/raspberry-smart-drive.git
    cd raspberry-smart-drive
-Dale permisos de ejecución al instalador:
+   ```
 
-Bash
+2. Da permisos de ejecución:
 
-chmod +x install.sh start.sh
-Ejecuta el instalador:
+   ```bash
+   chmod +x install.sh start.sh
+   ```
 
-Bash
+3. Ejecuta el instalador:
 
-./install.sh
-(Opcional) Monta tu USB: El sistema espera que los datos estén en /mnt/midrive. Si usas un USB, asegúrate de montarlo:
+   ```bash
+   sudo ./install.sh
+   ```
 
-Bash
+   El instalador se encarga de:
+   - Instalar dependencias del sistema (`python3-venv`, `python3-pip`, etc.).
+   - Crear y configurar `venv`.
+   - Instalar librerías Python necesarias.
+   - Crear carpetas `/mnt/midrive/inbox` y `/mnt/midrive/files`.
+   - Crear el servicio `systemd` (`smartdrive.service`) para autoarranque.
+   - Programar limpieza diaria de archivos temporales `.part` vía `cron`.
 
-sudo mount /dev/sda1 /mnt/midrive
-# Recuerda darle permisos de escritura si es NTFS/FAT32
-▶️ Uso
-Inicia el servidor con:
+4. (Opcional) Monta tu USB en `/mnt/midrive`:
 
-Bash
+   ```bash
+   sudo mount /dev/sda1 /mnt/midrive
+   ```
 
+   Si usas NTFS/FAT32, asegúrate de tener permisos de escritura.
+
+## ▶️ Uso
+
+### Producción (recomendado)
+
+Tras la instalación:
+
+```bash
+sudo systemctl start smartdrive
+sudo systemctl status smartdrive
+```
+
+### Desarrollo
+
+Inicia el servidor en modo desarrollo (con `--reload`):
+
+```bash
 ./start.sh
-Abre tu navegador y entra en: http://TU_IP:8000
+```
 
-📂 Estructura del Proyecto
-/inbox: Donde aterrizan los archivos recién subidos.
+Luego abre en el navegador:
 
-/files: Donde se catalogan y ordenan los archivos finales.
+- `http://TU_IP:8000`
 
-🤝 Contribuir
-¡Los Pull Requests son bienvenidos!
+## 📂 Estructura de datos
+
+- `/mnt/midrive/inbox`: archivos recién subidos.
+- `/mnt/midrive/files`: archivos catalogados en carpetas.
+
+## 🌐 Acceso remoto (portfolio)
+
+Sí, merece la pena incluirlo en el README para tu portfolio, aunque de forma resumida:
+
+- **Cloudflare Zero Trust (Tunnel):** exposición segura sin abrir puertos en el router.
+- **Tailscale:** acceso privado tipo VPN mesh entre tus dispositivos.
+
+Recomendación: deja aquí el resumen y, si quieres, crea luego una guía más detallada en `docs/deployment.md`.
+
+## 🔒 Nota de seguridad
+
+- No expongas `:8000` directamente a Internet.
+- Usa autenticación y una capa de acceso seguro (Cloudflare Zero Trust o Tailscale).
+
+## 🤝 Contribuir
+
+Pull Requests bienvenidos.
