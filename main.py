@@ -3,9 +3,10 @@ import os
 import asyncio
 from contextlib import asynccontextmanager
 from urllib.parse import quote, unquote
-from fastapi import FastAPI, Request, File, UploadFile, HTTPException, Form
+from fastapi import FastAPI, Request, File, UploadFile, HTTPException, Form, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.responses import FileResponse 
 from pydantic import BaseModel
 from natsort import natsorted
 
@@ -122,7 +123,6 @@ def listar_archivos_inbox():
 
 
 def obtener_arbol_recursivo(ruta_base, ruta_relativa=""):
-    """Construye el árbol de directorios para la vista catalogada."""
     estructura = {
         "nombre": os.path.basename(ruta_base),
         "ruta_relativa": ruta_relativa,
@@ -341,6 +341,12 @@ class MoveSchema(BaseModel):
     source_zone: str
     destination_folder: str
 
+
+class RenameSchema(BaseModel):
+    zone: str
+    item_path: str
+    new_name: str
+
 def move_file_sync(src, dst):
     shutil.move(src, dst)
 
@@ -388,3 +394,116 @@ async def move_file(data: MoveSchema):
 
     except Exception as e:
         return {"error": f"Error al mover: {str(e)}"}
+
+
+@app.post("/rename")
+def rename_item(data: RenameSchema):
+    try:
+        if data.zone not in ["catalog", "folder"]:
+            raise HTTPException(status_code=400, detail="Zona inválida")
+
+        clean_path = unquote(data.item_path).strip()
+        new_name = data.new_name.strip()
+
+        if not new_name:
+            raise HTTPException(status_code=400, detail="El nuevo nombre es obligatorio")
+
+        if "/" in new_name or "\\" in new_name:
+            raise HTTPException(status_code=400, detail="Nombre inválido")
+
+        source_path = sanitizar_ruta_entrada(clean_path, FILES_DIR)
+
+        if not os.path.exists(source_path):
+            raise HTTPException(status_code=404, detail="Elemento no encontrado")
+
+        if data.zone == "folder" and not os.path.isdir(source_path):
+            raise HTTPException(status_code=400, detail="La ruta no es una carpeta")
+
+        if data.zone == "catalog" and not os.path.isfile(source_path):
+            raise HTTPException(status_code=400, detail="La ruta no es un archivo")
+
+        parent_dir = os.path.dirname(source_path)
+        target_path = os.path.join(parent_dir, new_name)
+        target_rel = os.path.relpath(target_path, FILES_DIR)
+        safe_target = sanitizar_ruta_entrada(target_rel, FILES_DIR)
+
+        if os.path.exists(safe_target):
+            raise HTTPException(status_code=409, detail="Ya existe un elemento con ese nombre")
+
+        os.rename(source_path, safe_target)
+        new_relative = os.path.relpath(safe_target, FILES_DIR).replace("\\", "/")
+        return {"info": "Renombrado correctamente", "new_path": new_relative}
+
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=f"Error al renombrar: {str(e)}")
+
+# ==========================================
+# GESTIÓN AVANZADA DE CARPETAS (ZIP & BORRAR)
+# ==========================================
+
+# 1. BORRAR CARPETA VACÍA
+@app.delete("/delete-folder/{path:path}")
+def delete_folder(path: str):
+    try:
+        clean_path = unquote(path)
+        full_path = sanitizar_ruta_entrada(clean_path, FILES_DIR)
+        
+        # Seguridad: No borrar la raíz
+        if full_path == FILES_DIR:
+             raise HTTPException(status_code=403, detail="No se puede borrar la raíz")
+
+        if os.path.exists(full_path) and os.path.isdir(full_path):
+            try:
+                # CAMBIO: os.rmdir solo funciona si la carpeta está vacía
+                os.rmdir(full_path) 
+                return {"info": "Carpeta eliminada"}
+            except OSError:
+                # Si salta error, es que tiene cosas dentro
+                raise HTTPException(status_code=409, detail="La carpeta NO está vacía.")
+        
+        raise HTTPException(status_code=404, detail="Carpeta no encontrada")
+    except Exception as e:
+        if isinstance(e, HTTPException): raise e
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+# 2. DESCARGAR CARPETA COMO ZIP
+def remove_file(path: str):
+    try:
+        os.remove(path)
+    except Exception:
+        pass
+
+@app.get("/download-folder/{path:path}")
+def download_folder_zip(path: str, background_tasks: BackgroundTasks):
+    try:
+        clean_path = unquote(path)
+        full_path = sanitizar_ruta_entrada(clean_path, FILES_DIR)
+        folder_name = os.path.basename(full_path)
+        
+        if not os.path.isdir(full_path):
+            raise HTTPException(status_code=404, detail="Carpeta no encontrada")
+
+        # Zip temporal en /tmp
+        zip_filename = f"{folder_name}.zip"
+        zip_path = os.path.join("/tmp", zip_filename)
+        
+        # Crear ZIP (shutil lo hace nativo)
+        shutil.make_archive(zip_path.replace('.zip', ''), 'zip', full_path)
+        
+        # Programar borrado automático al terminar
+        background_tasks.add_task(remove_file, zip_path)
+        
+        return FileResponse(zip_path, media_type='application/zip', filename=zip_filename)
+    except Exception as e:
+        print(f"Error ZIP: {e}")
+        raise HTTPException(status_code=500, detail="Error creando ZIP")
+
+@app.get("/tree-html")
+def get_tree_html(request: Request):
+    tree = obtener_arbol_recursivo(FILES_DIR)
+    return templates.TemplateResponse("tree_fragment.html", {
+        "request": request,
+        "arbol_archivos": tree["subcarpetas"]
+    })

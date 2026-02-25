@@ -18,10 +18,10 @@
         .container { max-width: 900px; margin: 0 auto; }
         
         h1 { color: var(--accent-color); border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 25px; font-size: 1.5rem; }
-        h3 { font-size: 1.1rem; margin-top: 0; color: var(--text-main); }
+        h3 { font-size: 1.1rem; margin: 0; color: var(--text-main); } /* Margin 0 para alinear con botón */
 
         /* --- CARDS & SECTIONS --- */
-        .section-box, .upload-zone { background: var(--card-bg); border-radius: var(--radius); padding: 15px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .section-box, .upload-zone, dialog { background: var(--card-bg); border-radius: var(--radius); padding: 15px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .upload-zone { border: 2px dashed var(--border-color); text-align: center; }
         .upload-zone:hover { border-color: var(--accent-color); }
 
@@ -36,12 +36,49 @@
         button:hover, .btn-action:hover { background-color: var(--accent-hover); }
         button:disabled { opacity: 0.6; cursor: not-allowed; }
 
+        /* Botón de crear carpeta (más compacto) */
+        .btn-create { padding: 6px 12px; font-size: 0.9rem; }
+
         .btn-small { padding: 6px 10px; font-size: 0.85rem; }
         .btn-danger { background: transparent; border: 1px solid var(--danger-color); color: var(--danger-color); }
         .btn-danger:hover { background: var(--danger-color); color: white; }
         .btn-secondary { background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); }
         .btn-secondary:hover { border-color: var(--text-main); color: var(--text-main); }
         .btn-icon-only { padding: 6px; }
+
+        .action-menu { position: relative; }
+        .menu-trigger { min-width: 34px; padding: 6px 10px; font-size: 1.1rem; line-height: 1; }
+        .global-action-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            min-width: 150px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+            padding: 6px;
+            display: none;
+            z-index: 999999;
+        }
+        .menu-item {
+            width: 100%;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            color: var(--text-main);
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 0.9rem;
+            box-sizing: border-box;
+        }
+        .menu-item:hover { background: rgba(255,255,255,0.08); }
+        .menu-item.danger { color: var(--danger-color); }
 
         /* --- ICONOS SVG --- */
         .icon { width: 20px; height: 20px; fill: currentColor; flex-shrink: 0; }
@@ -60,6 +97,14 @@
         .folder-summary:hover { background: rgba(255,255,255,0.05); color: var(--accent-color); }
         summary::-webkit-details-marker { display: none; }
         .folder-summary.drag-over { background-color: rgba(59, 130, 246, 0.4) !important; border: 1px dashed #3b82f6; }
+        
+        /* Estilo para carpeta seleccionada */
+        .folder-summary.selected {
+            background-color: rgba(59, 130, 246, 0.2);
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+        }
+
         .draggable-file { cursor: grab; }
         
         /* --- UTILS --- */
@@ -68,22 +113,11 @@
         
         /* --- DIALOG (CENTRADO CORREGIDO) --- */
         dialog { 
-            /* Posicionamiento Absoluto al Centro */
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            margin: 0; /* Importante para anular márgenes del navegador */
-            
-            /* Estilo */
-            width: 90%; 
-            max-width: 450px; 
-            color: var(--text-main);
-            background: var(--card-bg); 
-            border-radius: var(--radius); 
-            padding: 20px; 
-            border: 1px solid var(--border-color); 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0;
+            width: 90%; max-width: 450px; 
+            color: var(--text-main); background: var(--card-bg); 
+            border-radius: var(--radius); padding: 20px; 
+            border: 1px solid var(--border-color); box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
         }
         dialog::backdrop { background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); }
         dialog label { color: var(--text-muted); display: block; margin-bottom: 5px; }
@@ -108,14 +142,25 @@
     <details class="folder-node">
         <summary class="folder-summary drop-zone"
                  data-folder="{{ carpeta.ruta_relativa|default(carpeta.nombre) }}"
+                 onclick="seleccionarCarpeta(event, '{{ carpeta.ruta_relativa|default(carpeta.nombre) }}')"
                  ondragover="allowDrop(event)" 
                  ondrop="handleDrop(event)" 
                  ondragleave="handleDragLeave(event)">
             
-            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">📁 {{ carpeta.nombre }}</span> 
-            <span class="file-count" style="color: var(--text-muted); margin-left: auto; font-size: 0.85em;">
-                ({{ carpeta.archivos|length }})
-            </span>
+            <span class="folder-name-text">📁 {{ carpeta.nombre }}</span> 
+            
+            <div class="folder-actions" style="margin-left: auto; display: flex; gap: 5px; align-items: center;">
+                <span class="file-count" style="color: var(--text-muted); font-size: 0.85em; margin-right: 5px;">
+                    (...)
+                </span>
+                <div class="action-menu">
+                    <button class="btn-small btn-secondary menu-trigger" title="Acciones"
+                            data-menu-type="folder"
+                            data-item-path="{{ carpeta.ruta_relativa|default(carpeta.nombre) }}"
+                            data-can-delete="{{ 1 if carpeta.ruta_relativa else 0 }}"
+                            onclick="return openActionMenuFromTrigger(this)">⋮</button>
+                </div>
+            </div>
         </summary>
         
         <div style="padding-left: 5px;">
@@ -137,12 +182,12 @@
                         <td style="color: var(--text-muted); text-align: right; white-space: nowrap;">{{ archivo.tamano }}</td>
                         <td style="text-align: right;">
                             <div class="table-actions">
-                                <a href="/data/files/{{ archivo.url_descarga }}" target="_blank" class="btn-action btn-small btn-secondary btn-icon-only">
-                                    <svg class="icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                                </a>
-                                <button class="btn-small btn-danger btn-icon-only" onclick="borrarCatalogado('{{ archivo.url_descarga }}')">
-                                    <svg class="icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                                </button>
+                                <div class="action-menu">
+                                    <button class="btn-small btn-secondary menu-trigger" title="Acciones"
+                                            data-menu-type="catalog-file"
+                                            data-item-path="{{ archivo.url_descarga }}"
+                                            onclick="return openActionMenuFromTrigger(this)">⋮</button>
+                                </div>
                             </div>
                         </td>
                     </tr>
@@ -180,17 +225,6 @@
             </form>
         </div>
         
-        {# CREAR CARPETA #}
-        <div class="section-box">
-            <h3>Nueva Carpeta</h3>
-            <div class="input-group">
-                <select id="parentFolderSelect"><option value=".">Cargando...</option></select>
-                <input type="text" id="newFolderName" placeholder="Nombre carpeta">
-                <button onclick="crearCarpetaGlobal()">Crear</button>
-            </div>
-            <small style="color: var(--text-muted); margin-top: 5px; display: block;">Base: /mnt/midrive/files/</small>
-        </div>
-
         {# INBOX #}
         <h3 style="margin-top: 40px;">Bandeja de Entrada (Inbox)</h3>
         <div class="section-box" style="padding: 0; overflow: hidden;">
@@ -209,8 +243,11 @@
                             <td style="color: var(--text-muted); white-space: nowrap;">{{ archivo.tamano }}</td>
                             <td style="padding-right: 10px;">
                                 <div class="table-actions">
-                                    <a href="/data/inbox/{{ archivo.url_encoded }}" target="_blank" class="btn-action btn-small btn-secondary" title="Descargar">
+                                    <a href="/data/inbox/{{ archivo.url_encoded }}" download="{{ archivo.nombre }}" class="btn-action btn-small btn-secondary" title="Descargar">
                                         <svg class="icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                                    </a>
+                                    <a href="/data/inbox/{{ archivo.url_encoded }}" target="_blank" rel="noopener" class="btn-action btn-small btn-secondary" title="Abrir">
+                                        <svg class="icon" viewBox="0 0 24 24"><path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3zM5 5h6v2H7v10h10v-4h2v6H5V5z"/></svg>
                                     </a>
                                     <button class="btn-small btn-secondary" onclick="moverArchivo('{{ archivo.nombre }}')">Mover</button>
                                     <button class="btn-small btn-danger btn-icon-only" onclick="borrarArchivo('{{ archivo.nombre }}')" title="Eliminar">
@@ -229,11 +266,23 @@
 
         <hr>
         
-        {# ÁRBOL #}
-        <h3>Archivos Catalogados</h3>
+        {# BOTONERA Y ÁRBOL #}
+        <div class="flex-row" style="align-items: center; margin-top: 30px; margin-bottom: 10px;">
+            <h3>Archivos Catalogados</h3>
+            <button onclick="crearCarpetaMaestra()" class="btn-action btn-create">
+                <svg class="icon" viewBox="0 0 24 24" style="margin-right:5px; width: 18px; height: 18px;"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+                Nueva Carpeta
+            </button>
+        </div>
+
+        <div id="selection-info" style="margin-bottom: 10px; font-size: 0.9em; color: var(--text-muted);">
+            Destino: <strong id="selected-folder-name" style="color: white;">Raíz (/files/)</strong>
+        </div>
+
         <div id="file-tree-root" class="section-box">
             {% for carpeta in arbol_archivos %} {{ render_carpeta(carpeta) }} {% else %} <p style="text-align: center; color: var(--text-muted);">No hay carpetas catalogadas.</p> {% endfor %}
         </div>
+
     </div>
 
     {# DIALOG #}
@@ -259,6 +308,7 @@
         </div>
     </dialog>
 
-    <script src="/static/js/main.js"></script>
+    <div id="global-action-menu" class="global-action-menu"></div>
+    <script src="/static/js/main.js?v=3"></script>
 </body>
 </html>
