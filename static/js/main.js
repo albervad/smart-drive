@@ -19,7 +19,12 @@ let draggedItemPath = null;
 let draggedItemZone = null;
 
 function apiPath(path) {
-    return `${DRIVE_API_BASE}${path}`;
+    const base = DRIVE_API_BASE.replace(/\/+$/, '');
+    if (!path) {
+        return base || '/';
+    }
+    const normalizedPath = String(path).replace(/^\/+/, '');
+    return `${base}/${normalizedPath}`;
 }
 
 function initTabs() {
