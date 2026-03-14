@@ -1,13 +1,13 @@
-{% macro render_carpeta(carpeta) %}
+{% macro render_folder(folder) %}
 <details class="folder-node">
     <summary class="folder-summary drop-zone"
-             data-folder="{{ carpeta.ruta_relativa|default(carpeta.nombre) }}"
-             onclick="seleccionarCarpeta(event, '{{ carpeta.ruta_relativa|default(carpeta.nombre) }}')"
+             data-folder="{{ folder.relative_path|default(folder.name) }}"
+             onclick="selectFolder(event, '{{ folder.relative_path|default(folder.name) }}')"
              ondragover="allowDrop(event)" 
              ondrop="handleDrop(event)" 
              ondragleave="handleDragLeave(event)">
         
-        <span class="folder-name-text">📁 {{ carpeta.nombre }}</span> 
+        <span class="folder-name-text">📁 {{ folder.name }}</span> 
         
         <div class="folder-actions" style="margin-left: auto; display: flex; gap: 5px; align-items: center;">
             <span class="file-count" style="color: var(--text-muted); font-size: 0.85em; margin-right: 5px;">(...)</span>
@@ -15,28 +15,28 @@
             <div class="action-menu">
                 <button class="btn-small btn-secondary menu-trigger" title="Acciones"
                         data-menu-type="folder"
-                        data-item-path="{{ carpeta.ruta_relativa|default(carpeta.nombre) }}"
-                        data-can-delete="{{ 1 if carpeta.ruta_relativa else 0 }}"
+                        data-item-path="{{ folder.relative_path|default(folder.name) }}"
+                        data-can-delete="{{ 1 if folder.relative_path else 0 }}"
                         onclick="return openActionMenuFromTrigger(this)">⋮</button>
             </div>
         </div>
     </summary>
     
     <div style="padding-left: 10px;">
-        {% for sub in carpeta.subcarpetas %} {{ render_carpeta(sub) }} {% endfor %}
-        {% if carpeta.archivos %}
+        {% for subfolder in folder.subfolders %} {{ render_folder(subfolder) }} {% endfor %}
+        {% if folder.files %}
         <div class="table-responsive">
             <table style="margin-bottom: 15px;">
-                {% for archivo in carpeta.archivos %}
-                <tr draggable="true" class="draggable-file" data-filepath="{{ archivo.url_descarga }}" data-zone="catalog" ondragstart="handleDragStart(event)">
-                    <td style="width: 50%; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">📄 {{ archivo.nombre }}</td>
-                    <td style="color: var(--text-muted); text-align: right;">{{ archivo.tamano }}</td>
+                {% for file in folder.files %}
+                <tr draggable="true" class="draggable-file" data-filepath="{{ file.relative_file_path }}" data-zone="catalog" ondragstart="handleDragStart(event)">
+                    <td style="width: 50%; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">📄 {{ file.name }}</td>
+                    <td style="color: var(--text-muted); text-align: right;">{{ file.size }}</td>
                     <td style="text-align: right;">
                         <div class="table-actions">
                             <div class="action-menu">
                                 <button class="btn-small btn-secondary menu-trigger" title="Acciones"
                                         data-menu-type="catalog-file"
-                                        data-item-path="{{ archivo.url_descarga }}"
+                                    data-item-path="{{ file.relative_file_path }}"
                                         onclick="return openActionMenuFromTrigger(this)">⋮</button>
                             </div>
                         </div>
@@ -51,5 +51,5 @@
 {% endmacro %}
 
 <div id="file-tree-root" class="section-box">
-    {% for carpeta in arbol_archivos %} {{ render_carpeta(carpeta) }} {% else %} <p style="text-align: center; color: var(--text-muted);">No hay carpetas catalogadas.</p> {% endfor %}
+    {% for folder in file_tree %} {{ render_folder(folder) }} {% else %} <p style="text-align: center; color: var(--text-muted);">No hay carpetas catalogadas.</p> {% endfor %}
 </div>

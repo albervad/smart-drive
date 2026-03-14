@@ -216,16 +216,16 @@
 </head>
 <body>
     {# Macro de renderizado del árbol #}
-    {% macro render_carpeta(carpeta) %}
+    {% macro render_folder(folder) %}
     <details class="folder-node">
         <summary class="folder-summary drop-zone"
-                 data-folder="{{ carpeta.ruta_relativa|default(carpeta.nombre) }}"
-                 onclick="seleccionarCarpeta(event, '{{ carpeta.ruta_relativa|default(carpeta.nombre) }}')"
+                 data-folder="{{ folder.relative_path|default(folder.name) }}"
+                 onclick="selectFolder(event, '{{ folder.relative_path|default(folder.name) }}')"
                  ondragover="allowDrop(event)" 
                  ondrop="handleDrop(event)" 
                  ondragleave="handleDragLeave(event)">
             
-            <span class="folder-name-text">📁 {{ carpeta.nombre }}</span> 
+            <span class="folder-name-text">📁 {{ folder.name }}</span> 
             
             <div class="folder-actions" style="margin-left: auto; display: flex; gap: 5px; align-items: center;">
                 <span class="file-count" style="color: var(--text-muted); font-size: 0.85em; margin-right: 5px;">
@@ -234,36 +234,36 @@
                 <div class="action-menu">
                     <button class="btn-small btn-secondary menu-trigger" title="Acciones"
                             data-menu-type="folder"
-                            data-item-path="{{ carpeta.ruta_relativa|default(carpeta.nombre) }}"
-                            data-can-delete="{{ 1 if carpeta.ruta_relativa else 0 }}"
+                            data-item-path="{{ folder.relative_path|default(folder.name) }}"
+                            data-can-delete="{{ 1 if folder.relative_path else 0 }}"
                             onclick="return openActionMenuFromTrigger(this)">⋮</button>
                 </div>
             </div>
         </summary>
         
         <div style="padding-left: 5px;">
-            {% for sub in carpeta.subcarpetas %}
-                {{ render_carpeta(sub) }}
+            {% for subfolder in folder.subfolders %}
+                {{ render_folder(subfolder) }}
             {% endfor %}
 
-            {% if carpeta.archivos %}
+            {% if folder.files %}
             <div class="table-responsive">
                 <table style="margin-bottom: 15px;">
-                    {% for archivo in carpeta.archivos %}
+                    {% for file in folder.files %}
                     <tr draggable="true" 
                         class="draggable-file" 
-                        data-filepath="{{ archivo.url_descarga }}"
+                        data-filepath="{{ file.relative_file_path }}"
                         data-zone="catalog"  
                         ondragstart="handleDragStart(event)">
                         
-                        <td style="width: 50%; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">📄 {{ archivo.nombre }}</td>
-                        <td style="color: var(--text-muted); text-align: right; white-space: nowrap;">{{ archivo.tamano }}</td>
+                        <td style="width: 50%; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">📄 {{ file.name }}</td>
+                        <td style="color: var(--text-muted); text-align: right; white-space: nowrap;">{{ file.size }}</td>
                         <td style="text-align: right;">
                             <div class="table-actions">
                                 <div class="action-menu">
                                     <button class="btn-small btn-secondary menu-trigger" title="Acciones"
                                             data-menu-type="catalog-file"
-                                            data-item-path="{{ archivo.url_descarga }}"
+                                            data-item-path="{{ file.relative_file_path }}"
                                             onclick="return openActionMenuFromTrigger(this)">⋮</button>
                                 </div>
                             </div>
@@ -280,7 +280,10 @@
     <div class="container">
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 25px;">
             <h1 style="margin: 0; padding: 0; border-bottom: none;">Raspberry Drive System</h1>
-            <a href="/" class="btn-action btn-secondary">Portfolio / CV</a>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <a href="/control" class="btn-action btn-secondary">Panel de control</a>
+                <a href="/" class="btn-action btn-secondary">Portfolio / CV</a>
+            </div>
         </div>
         <div class="tabs-nav" role="tablist" aria-label="Navegación principal">
             <button type="button" class="tab-btn active" data-tab="files">Archivos</button>
@@ -293,9 +296,11 @@
             <div class="section-box">
                 <div class="flex-row">
                     <span style="color: var(--text-muted); font-weight: 600;">ESTADO ALMACENAMIENTO</span>
-                    <span style="font-size: 0.9em;">{{ espacio_usado }} / {{ espacio_libre }}</span>
+                    <span style="font-size: 0.9em;">{{ used_space }} / {{ free_space }}</span>
                 </div>
-                <div style="background: #333; border-radius: 4px; overflow: hidden;"><div class="progress-bar" style="width: {{ porcentaje }}%;"></div></div>
+                <div style="background: #333; border-radius: 4px; overflow: hidden;">
+                    <div id="storage-usage-bar" class="progress-bar" data-usage-percent="{{ usage_percent }}"></div>
+                </div>
             </div>
 
             {# SUBIDA #}
@@ -319,25 +324,25 @@
                     <table style="margin-top: 0;">
                         <thead><tr><th style="padding-left: 10px;">Nombre</th><th>Tamaño</th><th style="text-align: right; padding-right: 10px;">Acciones</th></tr></thead>
                             <tbody>
-                            {% for archivo in archivos_inbox %}
+                            {% for file in inbox_files %}
                             <tr draggable="true" 
                                 class="draggable-file" 
-                                data-filepath="{{ archivo.nombre }}"
+                                data-filepath="{{ file.name }}"
                                 data-zone="inbox"    
                                 ondragstart="handleDragStart(event)">
                                 
-                                <td style="padding-left: 10px; font-weight: 500; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ archivo.nombre }}</td>
-                                <td style="color: var(--text-muted); white-space: nowrap;">{{ archivo.tamano }}</td>
+                                <td style="padding-left: 10px; font-weight: 500; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ file.name }}</td>
+                                <td style="color: var(--text-muted); white-space: nowrap;">{{ file.size }}</td>
                                 <td style="padding-right: 10px;">
                                     <div class="table-actions">
-                                        <a href="/drive/inbox/{{ archivo.url_encoded }}" download="{{ archivo.nombre }}" class="btn-action btn-small btn-secondary" title="Descargar">
+                                        <a href="{{ file.download_url }}" download="{{ file.name }}" class="btn-action btn-small btn-secondary" title="Descargar">
                                             <svg class="icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
                                         </a>
-                                        <a href="/drive/inbox/{{ archivo.url_encoded }}" target="_blank" rel="noopener" class="btn-action btn-small btn-secondary" title="Abrir">
+                                        <a href="{{ file.open_url }}" target="_blank" rel="noopener" class="btn-action btn-small btn-secondary" title="Abrir">
                                             <svg class="icon" viewBox="0 0 24 24"><path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3zM5 5h6v2H7v10h10v-4h2v6H5V5z"/></svg>
                                         </a>
-                                        <button class="btn-small btn-secondary" onclick="moverArchivo('{{ archivo.nombre }}')">Mover</button>
-                                        <button class="btn-small btn-danger btn-icon-only" onclick="borrarArchivo('{{ archivo.nombre }}')" title="Eliminar">
+                                        <button class="btn-small btn-secondary" onclick="moveFile('{{ file.name }}')">Mover</button>
+                                        <button class="btn-small btn-danger btn-icon-only" onclick="deleteInboxFile('{{ file.name }}')" title="Eliminar">
                                             <svg class="icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                                         </button>
                                     </div>
@@ -354,7 +359,7 @@
             {# BOTONERA Y ÁRBOL #}
             <div class="flex-row" style="align-items: center; margin-top: 0; margin-bottom: 10px;">
                 <h3>Archivos Catalogados</h3>
-                <button onclick="crearCarpetaMaestra()" class="btn-action btn-create">
+                <button onclick="createFolderAtSelection()" class="btn-action btn-create">
                     <svg class="icon" viewBox="0 0 24 24" style="margin-right:5px; width: 18px; height: 18px;"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
                     Nueva Carpeta
                 </button>
@@ -365,7 +370,7 @@
             </div>
 
             <div id="file-tree-root" class="section-box" style="margin-bottom: 0;">
-                {% for carpeta in arbol_archivos %} {{ render_carpeta(carpeta) }} {% else %} <p style="text-align: center; color: var(--text-muted);">No hay carpetas catalogadas.</p> {% endfor %}
+                {% for folder in file_tree %} {{ render_folder(folder) }} {% else %} <p style="text-align: center; color: var(--text-muted);">No hay carpetas catalogadas.</p> {% endfor %}
             </div>
         </section>
 
@@ -410,11 +415,6 @@
         </section>
 
         <hr>
-
-        <div style="color: var(--text-muted); font-size: 0.85rem; text-align: center;">
-            Vista simplificada con pestañas para reducir carga visual.
-        </div>
-
     </div>
 
     {# DIALOG #}
@@ -431,16 +431,16 @@
             <small style="color: var(--text-muted);">¿O crear nueva carpeta aquí?</small>
             <div class="input-group">
                 <input type="text" id="newFolderInput" placeholder="Nombre nueva carpeta...">
-                <button class="btn-secondary" onclick="crearCarpeta()">Crear</button>
+                <button class="btn-secondary" onclick="createFolder()">Crear</button>
             </div>
         </div>
         <div style="margin-top: 25px; text-align: right; display: flex; justify-content: flex-end; gap: 10px;">
             <button onclick="document.getElementById('moveDialog').close()" class="btn-secondary">Cancelar</button>
-            <button onclick="confirmarMover()">Confirmar Mover</button>
+            <button onclick="confirmMove()">Confirmar Mover</button>
         </div>
     </dialog>
 
     <div id="global-action-menu" class="global-action-menu"></div>
-    <script src="/static/js/main.js?v=9"></script>
+    <script src="/static/js/main.js?v=10"></script>
 </body>
 </html>

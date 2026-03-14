@@ -4,3 +4,4 @@ venv/
 .DS_Store
 *.pyc
 /mnt/midrive
+.smartdrive_audit/
