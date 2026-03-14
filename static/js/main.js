@@ -4,6 +4,7 @@
  */
 
 document.addEventListener("DOMContentLoaded", function() {
+    initStorageUsageBar();
     initTabs();
     initTreeCounts();
     fetchAndRenderFolders();
@@ -14,7 +15,7 @@ document.addEventListener("DOMContentLoaded", function() {
 const form = document.getElementById('upload-form');
 const dialog = document.getElementById('moveDialog');
 const DRIVE_API_BASE = '/drive';
-let archivoActual = ""; 
+let currentFile = ""; 
 let draggedItemPath = null; 
 let draggedItemZone = null;
 
@@ -25,6 +26,19 @@ function apiPath(path) {
     }
     const normalizedPath = String(path).replace(/^\/+/, '');
     return `${base}/${normalizedPath}`;
+}
+
+function initStorageUsageBar() {
+    const usageBar = document.getElementById('storage-usage-bar');
+    if (!usageBar) return;
+
+    const rawPercent = usageBar.dataset.usagePercent || '0';
+    const numericPercent = Number.parseFloat(rawPercent);
+    const boundedPercent = Number.isFinite(numericPercent)
+        ? Math.max(0, Math.min(numericPercent, 100))
+        : 0;
+
+    usageBar.style.width = `${boundedPercent}%`;
 }
 
 function initTabs() {
@@ -74,12 +88,12 @@ function initClipboard() {
 
     if (!textArea || !saveBtn || !copyBtn || !pasteBtn || !refreshBtn) return;
 
-    saveBtn.addEventListener('click', guardarPortapapelesCompartido);
-    copyBtn.addEventListener('click', copiarPortapapelesLocal);
-    pasteBtn.addEventListener('click', pegarPortapapelesLocal);
-    refreshBtn.addEventListener('click', cargarPortapapelesCompartido);
+    saveBtn.addEventListener('click', saveSharedClipboard);
+    copyBtn.addEventListener('click', copyLocalClipboard);
+    pasteBtn.addEventListener('click', pasteLocalClipboard);
+    refreshBtn.addEventListener('click', loadSharedClipboard);
 
-    cargarPortapapelesCompartido();
+    loadSharedClipboard();
 }
 
 function setClipboardStatus(message, isError = false) {
@@ -89,14 +103,14 @@ function setClipboardStatus(message, isError = false) {
     status.style.color = isError ? 'var(--danger-color)' : 'var(--text-muted)';
 }
 
-function formatearFechaClipboard(rawDate) {
+function formatClipboardDate(rawDate) {
     if (!rawDate) return 'Sin actualizaciones todavía.';
     const date = new Date(rawDate);
     if (Number.isNaN(date.getTime())) return 'Última actualización: fecha no disponible';
     return `Última actualización: ${date.toLocaleString()}`;
 }
 
-async function cargarPortapapelesCompartido() {
+async function loadSharedClipboard() {
     const textArea = document.getElementById('clipboard-text');
     if (!textArea) return;
 
@@ -108,13 +122,13 @@ async function cargarPortapapelesCompartido() {
 
         const data = await res.json();
         textArea.value = data.text || '';
-        setClipboardStatus(formatearFechaClipboard(data.updated_at));
+        setClipboardStatus(formatClipboardDate(data.updated_at));
     } catch (error) {
         setClipboardStatus('No se pudo cargar el portapapeles compartido.', true);
     }
 }
 
-async function guardarPortapapelesCompartido() {
+async function saveSharedClipboard() {
     const textArea = document.getElementById('clipboard-text');
     if (!textArea) return;
 
@@ -131,13 +145,13 @@ async function guardarPortapapelesCompartido() {
 
         const data = await res.json();
         textArea.value = data.text || '';
-        setClipboardStatus(`${formatearFechaClipboard(data.updated_at)} · Guardado`);
+        setClipboardStatus(`${formatClipboardDate(data.updated_at)} · Guardado`);
     } catch (error) {
         setClipboardStatus('No se pudo guardar el portapapeles compartido.', true);
     }
 }
 
-async function copiarPortapapelesLocal() {
+async function copyLocalClipboard() {
     const textArea = document.getElementById('clipboard-text');
     if (!textArea) return;
 
@@ -154,7 +168,7 @@ async function copiarPortapapelesLocal() {
     }
 }
 
-async function pegarPortapapelesLocal() {
+async function pasteLocalClipboard() {
     const textArea = document.getElementById('clipboard-text');
     if (!textArea) return;
 
@@ -183,11 +197,11 @@ function initSearch() {
         event.preventDefault();
         const query = searchInput.value.trim();
         const mode = searchMode.value;
-        await ejecutarBusqueda(query, mode);
+        await runSearch(query, mode);
     });
 }
 
-async function ejecutarBusqueda(query, mode = 'both') {
+    async function runSearch(query, mode = 'both') {
     const resultsBox = document.getElementById('search-results');
     if (!resultsBox) return;
 
@@ -249,13 +263,13 @@ function renderSearchResults(results, query) {
         tdName.style.overflow = 'hidden';
         tdName.style.textOverflow = 'ellipsis';
         tdName.style.whiteSpace = 'nowrap';
-        tdName.textContent = `${item.nombre} (${item.tamano})`;
+        tdName.textContent = `${item.name} (${item.size})`;
 
         const tdZone = document.createElement('td');
-        tdZone.textContent = item.zona === 'inbox' ? 'Inbox' : 'Catálogo';
+        tdZone.textContent = item.zone === 'inbox' ? 'Inbox' : 'Catálogo';
 
         const tdMatch = document.createElement('td');
-        tdMatch.textContent = item.coincidencia;
+        tdMatch.textContent = item.match_type;
 
         const tdSnippet = document.createElement('td');
         tdSnippet.style.maxWidth = '280px';
@@ -263,7 +277,7 @@ function renderSearchResults(results, query) {
         tdSnippet.style.textOverflow = 'ellipsis';
         tdSnippet.style.whiteSpace = 'nowrap';
         tdSnippet.style.color = 'var(--text-muted)';
-        tdSnippet.textContent = item.fragmento || '-';
+        tdSnippet.textContent = item.snippet || '-';
 
         const tdActions = document.createElement('td');
         tdActions.style.textAlign = 'right';
@@ -273,7 +287,7 @@ function renderSearchResults(results, query) {
         const btnDownload = document.createElement('a');
         btnDownload.href = item.url;
         btnDownload.className = 'btn-action btn-small btn-secondary';
-        btnDownload.setAttribute('download', item.nombre);
+        btnDownload.setAttribute('download', item.name);
         btnDownload.title = 'Descargar';
         btnDownload.textContent = 'Descargar';
 
@@ -342,8 +356,8 @@ if (form) {
             form.appendChild(progressBox);
         }
 
-        const boton = form.querySelector('button');
-        boton.disabled = true;
+        const submitButton = form.querySelector('button');
+        submitButton.disabled = true;
 
         // --- BUCLE SECUENCIAL ---
         for (let i = 0; i < totalFiles; i++) {
@@ -417,10 +431,10 @@ async function uploadSingleFile(file) {
 
     // 3. FINALIZAR
     statusText.innerText = `Finalizando ${file.name}...`;
-    await finalizarSubida(file.name);
+    await finishUpload(file.name);
 }
 
-async function finalizarSubida(filename, action = 'check') {
+async function finishUpload(filename, action = 'check') {
     const formFinish = new FormData();
     formFinish.append("filename", filename);
     formFinish.append("action", action); 
@@ -428,7 +442,7 @@ async function finalizarSubida(filename, action = 'check') {
     const res = await fetch(apiPath('/upload_finish'), { method: "POST", body: formFinish });
 
     if (res.status === 409) {
-        return finalizarSubida(filename, 'rename'); // Auto-rename en colas
+        return finishUpload(filename, 'rename'); // Auto-rename en colas
     }
     if (!res.ok) {
         const txt = await res.text();
@@ -496,7 +510,7 @@ function formatAndRenderFolders(selectElement, folders, suggestedFolder = null) 
 }
 
 // Recargar árbol vía AJAX manteniendo estado abierto
-async function recargarArbol() {
+async function reloadTree() {
     try {
         if (typeof closeActionMenus === 'function') closeActionMenus();
         const openPaths = new Set();
@@ -528,29 +542,27 @@ async function recargarArbol() {
 }
 
 // ==========================================
-// 3. MOVIMIENTOS, DROP Y BORRADO (CORREGIDO INBOX VACIO)
+// 3. MOVIMIENTOS, DROP Y BORRADO 
 // ==========================================
 
-window.confirmarMover = async function() {
-    const destino = document.getElementById('folderSelect').value;
-    if (!destino || destino.includes("--")) return alert("Destino inválido");
+window.confirmMove = async function() {
+    const destination = document.getElementById('folderSelect').value;
+    if (!destination || destination.includes("--")) return alert("Destino inválido");
     
     try {
         const res = await fetch(apiPath('/move'), { 
             method: 'POST', 
             headers: {'Content-Type': 'application/json'}, 
-            body: JSON.stringify({ source_path: archivoActual, source_zone: 'inbox', destination_folder: destino }) 
+            body: JSON.stringify({ source_path: currentFile, source_zone: 'inbox', destination_folder: destination }) 
         });
         
         const data = await res.json();
         if (res.ok && !data.error) { 
             dialog.close(); 
-            const row = document.querySelector(`tr[data-filepath="${CSS.escape(archivoActual)}"][data-zone="inbox"]`);
+            const row = document.querySelector(`tr[data-filepath="${CSS.escape(currentFile)}"][data-zone="inbox"]`);
+            removeInboxRow(row);
             
-            // CORREGIDO: Usar helper para mostrar "Inbox vacío"
-            eliminarFilaInbox(row);
-            
-            await recargarArbol();
+            await reloadTree();
         } else { alert("Error: " + (data.error || "Desconocido")); }
     } catch (error) { alert("Error de red."); }
 };
@@ -573,17 +585,15 @@ window.handleDrop = async function(event) {
         if (res.ok && !data.error) {
             if (draggedItemZone === 'inbox') {
                 const row = document.querySelector(`tr[data-filepath="${CSS.escape(draggedItemPath)}"][data-zone="inbox"]`);
-                
-                // CORREGIDO: Usar helper
-                eliminarFilaInbox(row);
+                removeInboxRow(row);
             }
-            await recargarArbol();
+            await reloadTree();
         } else { alert("Error: " + (data.error || "Desconocido")); }
     } catch (error) { alert("Error de red."); }
 };
 
-window.borrarArchivo = async function(nombre) { if (confirm("¿Eliminar " + nombre + "?")) await ejecutarBorrado('inbox', nombre); };
-window.borrarCatalogado = async function(ruta) { if (confirm("¿Eliminar del catálogo?")) await ejecutarBorrado('catalog', ruta); };
+window.deleteInboxFile = async function(fileName) { if (confirm("¿Eliminar " + fileName + "?")) await runDelete('inbox', fileName); };
+window.deleteCatalogFile = async function(path) { if (confirm("¿Eliminar del catálogo?")) await runDelete('catalog', path); };
 
 let activeMenuTrigger = null;
 
@@ -611,16 +621,16 @@ window.openActionMenu = function(event, triggerBtn) {
 
     const actions = [];
     if (menuType === 'folder') {
-        actions.push({ label: 'Descargar ZIP', danger: false, handler: () => descargarZip(itemPath) });
-        actions.push({ label: 'Renombrar', danger: false, handler: () => renombrarCarpeta(itemPath) });
+        actions.push({ label: 'Descargar ZIP', danger: false, handler: () => downloadZip(itemPath) });
+        actions.push({ label: 'Renombrar', danger: false, handler: () => renameFolder(itemPath) });
         if (canDelete) {
-            actions.push({ label: 'Borrar', danger: true, handler: () => borrarCarpeta(itemPath) });
+            actions.push({ label: 'Borrar', danger: true, handler: () => deleteFolder(itemPath) });
         }
     } else if (menuType === 'catalog-file') {
-        actions.push({ label: 'Descargar', danger: false, handler: () => descargarArchivo(`/drive/files/${itemPath}`) });
-        actions.push({ label: 'Abrir', danger: false, handler: () => abrirArchivo(`/drive/files/${itemPath}`) });
-        actions.push({ label: 'Renombrar', danger: false, handler: () => renombrarCatalogado(itemPath) });
-        actions.push({ label: 'Borrar', danger: true, handler: () => borrarCatalogado(itemPath) });
+        actions.push({ label: 'Descargar', danger: false, handler: () => downloadFile(`/drive/files/${itemPath}`) });
+        actions.push({ label: 'Abrir', danger: false, handler: () => openFile(`/drive/files/${itemPath}`) });
+        actions.push({ label: 'Renombrar', danger: false, handler: () => renameCatalogFile(itemPath) });
+        actions.push({ label: 'Borrar', danger: true, handler: () => deleteCatalogFile(itemPath) });
     }
 
     menu.innerHTML = '';
@@ -680,16 +690,14 @@ function positionGlobalMenu(triggerBtn, menu) {
     menu.style.top = `${top}px`;
 }
 
-async function ejecutarBorrado(zona, ruta) {
+async function runDelete(zone, path) {
     try {
-        const res = await fetch(`${apiPath('/delete')}/${zona}/${encodeURIComponent(ruta)}`, { method: 'DELETE' });
+        const res = await fetch(`${apiPath('/delete')}/${zone}/${encodeURIComponent(path)}`, { method: 'DELETE' });
         if (res.ok) {
-            if (zona === 'inbox') {
-                const row = document.querySelector(`tr[data-filepath="${CSS.escape(ruta)}"][data-zone="inbox"]`);
-                
-                // CORREGIDO: Usar helper
-                eliminarFilaInbox(row);
-            } else { await recargarArbol(); }
+            if (zone === 'inbox') {
+                const row = document.querySelector(`tr[data-filepath="${CSS.escape(path)}"][data-zone="inbox"]`);
+                removeInboxRow(row);
+            } else { await reloadTree(); }
         } else { const data = await res.json(); alert("Error: " + data.detail); }
     } catch (error) { alert("Error de conexión"); }
 }
@@ -702,7 +710,7 @@ document.addEventListener("dragend", function(e) { if(e.target) e.target.style.o
 // NUEVAS FUNCIONES DE CARPETA
 let currentSelectedFolder = "."; 
 
-window.seleccionarCarpeta = function(event, path) {
+window.selectFolder = function(event, path) {
     document.querySelectorAll('.folder-summary.selected').forEach(el => el.classList.remove('selected'));
     event.currentTarget.classList.add('selected');
     currentSelectedFolder = path;
@@ -710,26 +718,26 @@ window.seleccionarCarpeta = function(event, path) {
     if(label) label.innerText = path === "." ? "Raíz (/files/)" : path;
 };
 
-window.crearCarpetaMaestra = async function() {
-    const nombre = prompt("Nombre de la nueva carpeta (dentro de " + currentSelectedFolder + "):");
-    if (!nombre) return;
-    const fullPath = currentSelectedFolder === "." ? nombre : `${currentSelectedFolder}/${nombre}`;
+window.createFolderAtSelection = async function() {
+    const folderName = prompt("Nombre de la nueva carpeta (dentro de " + currentSelectedFolder + "):");
+    if (!folderName) return;
+    const fullPath = currentSelectedFolder === "." ? folderName : `${currentSelectedFolder}/${folderName}`;
     try {
         const res = await fetch(apiPath('/create-folder'), { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({folder_name: fullPath}) });
         if (res.ok) { 
-            await recargarArbol();
+            await reloadTree();
             currentSelectedFolder = ".";
             document.getElementById('selected-folder-name').innerText = "Raíz (/files/)";
         } else { const d = await res.json(); alert("Error: " + d.error); }
     } catch (e) { alert("Error de red"); }
 };
 
-window.borrarCarpeta = async function(path) {
+window.deleteFolder = async function(path) {
     if (!confirm(`¿Borrar carpeta vacía '${path}'?`)) return;
     try {
         const res = await fetch(`${apiPath('/delete-folder')}/${encodeURIComponent(path)}`, { method: 'DELETE' });
         if (res.ok) {
-            await recargarArbol();
+            await reloadTree();
             currentSelectedFolder = ".";
             document.getElementById('selected-folder-name').innerText = "Raíz (/files/)";
         } else { 
@@ -738,38 +746,38 @@ window.borrarCarpeta = async function(path) {
     } catch (e) { alert("Error de red"); }
 };
 
-window.descargarZip = function(path) {
+window.downloadZip = function(path) {
     window.open(`${apiPath('/download-folder')}/${encodeURIComponent(path)}`, '_blank');
 };
 
-window.descargarArchivo = function(url) {
-    const enlace = document.createElement('a');
-    enlace.href = url;
-    enlace.download = '';
-    enlace.rel = 'noopener';
-    document.body.appendChild(enlace);
-    enlace.click();
-    enlace.remove();
+window.downloadFile = function(url) {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = '';
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
 };
 
-window.abrirArchivo = function(url) {
+window.openFile = function(url) {
     window.open(url, '_blank', 'noopener');
 };
 
-window.renombrarCarpeta = async function(path) {
-    const nombreActual = path.split('/').pop();
-    const nuevoNombre = prompt("Nuevo nombre de carpeta:", nombreActual);
-    if (!nuevoNombre || nuevoNombre === nombreActual) return;
+window.renameFolder = async function(path) {
+    const currentName = path.split('/').pop();
+    const newName = prompt("Nuevo nombre de carpeta:", currentName);
+    if (!newName || newName === currentName) return;
 
     try {
         const res = await fetch(apiPath('/rename'), {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ zone: 'folder', item_path: path, new_name: nuevoNombre })
+            body: JSON.stringify({ zone: 'folder', item_path: path, new_name: newName })
         });
         const data = await res.json();
         if (res.ok) {
-            await recargarArbol();
+            await reloadTree();
             currentSelectedFolder = ".";
             const label = document.getElementById('selected-folder-name');
             if (label) label.innerText = "Raíz (/files/)";
@@ -781,23 +789,23 @@ window.renombrarCarpeta = async function(path) {
     }
 };
 
-window.renombrarCatalogado = async function(rutaCodificada) {
-    let ruta = rutaCodificada;
-    try { ruta = decodeURIComponent(rutaCodificada); } catch (e) {}
+window.renameCatalogFile = async function(encodedPath) {
+    let path = encodedPath;
+    try { path = decodeURIComponent(encodedPath); } catch (e) {}
 
-    const nombreActual = ruta.split('/').pop();
-    const nuevoNombre = prompt("Nuevo nombre del archivo:", nombreActual);
-    if (!nuevoNombre || nuevoNombre === nombreActual) return;
+    const currentName = path.split('/').pop();
+    const newName = prompt("Nuevo nombre del archivo:", currentName);
+    if (!newName || newName === currentName) return;
 
     try {
         const res = await fetch(apiPath('/rename'), {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ zone: 'catalog', item_path: ruta, new_name: nuevoNombre })
+            body: JSON.stringify({ zone: 'catalog', item_path: path, new_name: newName })
         });
         const data = await res.json();
         if (res.ok) {
-            await recargarArbol();
+            await reloadTree();
         } else {
             alert("Error: " + (data.detail || data.error || "No se pudo renombrar"));
         }
@@ -834,17 +842,17 @@ window.addEventListener('scroll', function() {
 }, true);
 
 // OTRAS
-window.crearCarpeta = async function() {
-    const nombre = document.getElementById('newFolderInput').value;
-    if (!nombre) return;
-    const res = await fetch(apiPath('/create-folder'), { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({folder_name: nombre}) });
-    if (res.ok) { alert("Carpeta creada"); document.getElementById('newFolderInput').value = ""; window.moverArchivo(archivoActual); }
+window.createFolder = async function() {
+    const folderName = document.getElementById('newFolderInput').value;
+    if (!folderName) return;
+    const res = await fetch(apiPath('/create-folder'), { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({folder_name: folderName}) });
+    if (res.ok) { alert("Carpeta creada"); document.getElementById('newFolderInput').value = ""; window.moveFile(currentFile); }
 };
 
-window.moverArchivo = async function(nombre) {
-    archivoActual = nombre; 
-    document.getElementById('modalFilename').innerText = nombre;
-    const res = await fetch(apiPath('/scan-folders/' + encodeURIComponent(nombre))); 
+window.moveFile = async function(fileName) {
+    currentFile = fileName; 
+    document.getElementById('modalFilename').innerText = fileName;
+    const res = await fetch(apiPath('/scan-folders/' + encodeURIComponent(fileName))); 
     const data = await res.json();
     const select = document.getElementById('folderSelect'); 
     if (data.folders.length === 0) { select.innerHTML = ""; select.add(new Option("-- No hay carpetas --")); } 
@@ -853,7 +861,7 @@ window.moverArchivo = async function(nombre) {
 };
 
 // --- Helper para gestionar el vaciado del Inbox ---
-function eliminarFilaInbox(row) {
+function removeInboxRow(row) {
     if (!row) return;
     const tbody = row.parentElement;
     row.remove();
