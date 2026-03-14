@@ -6,6 +6,9 @@ from smartdrive.infrastructure.file_ops import delete_file, path_exists, rename_
 from smartdrive.infrastructure.settings import INBOX_DIR
 from smartdrive.infrastructure.storage import generate_unique_name, sanitize_input_path
 from smartdrive.infrastructure.uploads import write_upload_chunk
+from smartdrive.infrastructure.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 def get_upload_status(filename: str) -> dict:
@@ -25,9 +28,9 @@ def upload_chunk(file: UploadFile, filename: str, chunk_offset: int) -> dict:
     try:
         write_upload_chunk(file, partial_path)
         return {"received": "ok"}
-    except Exception as exc:
-        print(f"[ERROR] Fallo escribiendo {safe_filename}: {exc}")
-        raise HTTPException(status_code=500, detail=f"Error I/O: {str(exc)}")
+    except Exception:
+        logger.exception("Fallo escribiendo %s", safe_filename)
+        raise HTTPException(status_code=500, detail="Error I/O al escribir el archivo")
     finally:
         file.file.close()
 
