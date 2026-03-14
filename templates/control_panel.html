@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control | Smart Drive</title>
+    <link rel="icon" type="image/png" href="/static/img/icon.png">
+    <style>
+        :root {
+            --bg-color: #0b1220;
+            --card-bg: rgba(16, 24, 40, 0.82);
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border-color: rgba(148, 163, 184, 0.22);
+            --accent-color: #5ca7ff;
+            --accent-hover: #3f91f0;
+            --danger-color: #ef4444;
+            --ok-color: #22c55e;
+            --radius: 12px;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 18px;
+            font-family: Inter, system-ui, sans-serif;
+            color: var(--text-main);
+            background:
+                radial-gradient(900px 420px at 8% -8%, rgba(92, 167, 255, 0.22), transparent 60%),
+                radial-gradient(900px 480px at 90% -15%, rgba(79, 70, 229, 0.18), transparent 65%),
+                var(--bg-color);
+        }
+
+        .container { width: min(1400px, 96vw); margin: 0 auto; }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+            margin-bottom: 18px;
+        }
+
+        .header h1 { margin: 0; font-size: 1.45rem; }
+
+        .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        .panel {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 10px;
+        }
+
+        .stat {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px;
+        }
+
+        .stat .label { color: var(--text-muted); font-size: 0.82rem; }
+        .stat .value { font-size: 1.35rem; font-weight: 700; margin-top: 4px; }
+
+        .btn {
+            appearance: none;
+            border: none;
+            border-radius: 10px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #f8fafc;
+            background: var(--accent-color);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:hover { background: var(--accent-hover); }
+        .btn-secondary { background: transparent; color: var(--text-main); border: 1px solid var(--border-color); }
+        .btn-danger { background: transparent; color: var(--danger-color); border: 1px solid var(--danger-color); }
+        .btn-danger:hover { background: var(--danger-color); color: #fff; }
+        .btn-ok { background: transparent; color: var(--ok-color); border: 1px solid var(--ok-color); }
+        .btn-ok:hover { background: var(--ok-color); color: #fff; }
+
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 760px; }
+        th, td {
+            text-align: left;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+            padding: 10px 8px;
+            vertical-align: top;
+            font-size: 0.88rem;
+        }
+
+        th { color: var(--text-muted); font-weight: 600; }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            border: 1px solid var(--border-color);
+            margin-right: 4px;
+            margin-bottom: 4px;
+        }
+
+        .status.new { border-color: var(--accent-color); color: var(--accent-color); }
+        .status.blocked { border-color: var(--danger-color); color: var(--danger-color); }
+        .status.owner { border-color: var(--ok-color); color: var(--ok-color); }
+
+        .row-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .row-actions form { margin: 0; }
+
+        .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.8rem; }
+
+        .details {
+            display: grid;
+            gap: 2px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        .small { color: var(--text-muted); font-size: 0.82rem; }
+
+        @media (max-width: 900px) {
+            table { min-width: 640px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Panel de control de accesos</h1>
+            <div class="actions">
+                <a class="btn btn-secondary" href="/drive/">Volver al Drive</a>
+                <a class="btn btn-secondary" href="/">Portfolio</a>
+                <a class="btn btn-secondary" href="{% if non_owner_only %}/control{% else %}/control?non_owner_only=1{% endif %}">
+                    {% if non_owner_only %}Ver todos los registros{% else %}Solo no admin{% endif %}
+                </a>
+                <form method="post" action="/control/visitors/clear{% if non_owner_only %}?non_owner_only=1{% endif %}" style="margin:0;">
+                    <button class="btn btn-danger" type="submit">Borrar usuarios detectados</button>
+                </form>
+                <form method="post" action="/control/events/clear{% if non_owner_only %}?non_owner_only=1{% endif %}" style="margin:0;">
+                    <button class="btn btn-danger" type="submit">Borrar todos los registros</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="stats-grid">
+                <div class="stat">
+                    <div class="label">Usuarios totales detectados</div>
+                    <div class="value">{{ stats.total_visitors }}</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Usuarios nuevos ({{ new_visitor_window_hours }}h)</div>
+                    <div class="value">{{ stats.new_visitors }}</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Visitas portfolio (excluyendo admin)</div>
+                    <div class="value">{{ stats.portfolio_visits_excluding_owner }}</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Visitantes únicos portfolio (excluyendo admin)</div>
+                    <div class="value">{{ stats.portfolio_unique_visitors_excluding_owner }}</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Visitas portfolio últimas 24h (excluyendo admin)</div>
+                    <div class="value">{{ stats.portfolio_visits_last_24h_excluding_owner }}</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Eventos auditados</div>
+                    <div class="value">{{ stats.total_events }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3 style="margin-top:0;">Usuarios detectados</h3>
+            <p class="small">Identificación pasiva: cookie técnica + IP + user-agent + idioma (sin pedir permisos del navegador).</p>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Primera vez</th>
+                            <th>Última vez</th>
+                            <th>Huella</th>
+                            <th>Métricas</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for visitor in visitors %}
+                        <tr>
+                            <td>
+                                <div class="mono">{{ visitor.visitor_short }}</div>
+                                <div class="details">
+                                    <div>IP: {{ visitor.last_ip }}</div>
+                                    <div title="{{ visitor.user_agent }}">UA: {{ visitor.user_agent[:70] }}{% if visitor.user_agent|length > 70 %}...{% endif %}</div>
+                                </div>
+                            </td>
+                            <td class="small">{{ visitor.first_seen }}</td>
+                            <td class="small">{{ visitor.last_seen }}</td>
+                            <td class="mono">{{ visitor.fingerprint }}</td>
+                            <td>
+                                <div>Requests: <strong>{{ visitor.requests_count }}</strong></div>
+                                <div>Acciones: <strong>{{ visitor.actions_count }}</strong></div>
+                            </td>
+                            <td>
+                                {% if visitor.is_new %}<span class="status new">Nuevo</span>{% endif %}
+                                {% if visitor.is_owner %}<span class="status owner">Admin</span>{% endif %}
+                                {% if visitor.is_blocked %}<span class="status blocked">Bloqueado</span>{% endif %}
+                            </td>
+                            <td>
+                                <div class="row-actions">
+                                    {% if visitor.is_blocked %}
+                                    <form method="post" action="/control/visitor/{{ visitor.visitor_id }}/unblock{% if non_owner_only %}?non_owner_only=1{% endif %}">
+                                        <button class="btn btn-ok" type="submit">Desbloquear</button>
+                                    </form>
+                                    {% else %}
+                                    <form method="post" action="/control/visitor/{{ visitor.visitor_id }}/block{% if non_owner_only %}?non_owner_only=1{% endif %}">
+                                        <button class="btn btn-danger" type="submit">Bloquear</button>
+                                    </form>
+                                    {% endif %}
+
+                                    {% if visitor.is_owner %}
+                                    <form method="post" action="/control/visitor/{{ visitor.visitor_id }}/unmark-owner{% if non_owner_only %}?non_owner_only=1{% endif %}">
+                                        <button class="btn btn-secondary" type="submit">Quitar admin</button>
+                                    </form>
+                                    {% else %}
+                                    <form method="post" action="/control/visitor/{{ visitor.visitor_id }}/mark-owner{% if non_owner_only %}?non_owner_only=1{% endif %}">
+                                        <button class="btn btn-secondary" type="submit">Marcar admin</button>
+                                    </form>
+                                    {% endif %}
+
+                                    <form method="post" action="/control/events/clear/{{ visitor.visitor_id }}{% if non_owner_only %}?non_owner_only=1{% endif %}">
+                                        <button class="btn btn-secondary" type="submit">Borrar sus registros</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="small">Aún no hay usuarios registrados.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3 style="margin-top:0;">Actividad reciente {% if non_owner_only %}(solo no admin){% endif %}</h3>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Usuario</th>
+                            <th>Acción</th>
+                            <th>Ruta</th>
+                            <th>Estado</th>
+                            <th>Detalle</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event in events %}
+                        <tr>
+                            <td class="small">{{ event.timestamp }}</td>
+                            <td>
+                                <div class="mono">{{ event.visitor_short }}</div>
+                                <div class="small">{{ event.ip }}</div>
+                            </td>
+                            <td>{{ event.action }}</td>
+                            <td class="mono">{{ event.path }}</td>
+                            <td>{{ event.status }}</td>
+                            <td class="small">
+                                {% if event.details %}
+                                    {% for key, value in event.details.items() %}
+                                    <div>{{ key }}: {{ value }}</div>
+                                    {% endfor %}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="small">Sin actividad reciente.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -133,18 +133,64 @@ sudo systemctl start smartdrive
 sudo systemctl status smartdrive
 ```
 
+Instancia pública inmutable (`8000`):
+
+- El servicio público corre desde un directorio aislado (`/home/alberto/mydrive-prod-main`), no desde el directorio de trabajo.
+- Cambiar de rama o editar archivos en `/home/alberto/mydrive` no modifica la web pública.
+- La web pública solo se actualiza cuando publicas explícitamente `main`.
+
+Publicar `main` en la web pública:
+
+```bash
+./deploy_main_to_public.sh
+```
+
+Opcionalmente, puedes publicar otra referencia:
+
+```bash
+./deploy_main_to_public.sh main
+```
+
 ### Desarrollo
 
 ```bash
-./start.sh
+./start.sh 8001
 ```
+
+Parámetros opcionales:
+
+```bash
+./start.sh [PORT] [HOST] [BASE_MOUNT]
+```
+
+- `PORT`: por defecto `8001` (evita chocar con producción en `8000`).
+- `HOST`: por defecto `0.0.0.0` (accesible desde la red local).
+- `BASE_MOUNT`: ruta de datos para esta instancia (si se indica, se crea `inbox/` y `files/`).
+
+Regla de seguridad en `start.sh`:
+
+- El puerto `8000` queda reservado para la rama `main`.
+- Si se intenta arrancar en `8000` desde otra rama, el script falla con error.
+- En `8000`, `--reload` queda desactivado por defecto (se puede forzar con `SMARTDRIVE_RELOAD=1` si es necesario).
 
 ### Debug logs (desarrollo)
 
 Para activar trazas de depuración y logs HTTP de cada request:
 
 ```bash
-SMARTDRIVE_DEBUG=1 SMARTDRIVE_REQUEST_LOGGING=1 ./start.sh
+SMARTDRIVE_DEBUG=1 SMARTDRIVE_REQUEST_LOGGING=1 ./start.sh 8001
+```
+
+Para forzar solo localhost:
+
+```bash
+SMARTDRIVE_DEBUG=1 SMARTDRIVE_REQUEST_LOGGING=1 ./start.sh 8001 127.0.0.1
+```
+
+Para depurar sin tocar datos de la instancia pública:
+
+```bash
+SMARTDRIVE_DEBUG=1 SMARTDRIVE_REQUEST_LOGGING=1 SMARTDRIVE_BASE_MOUNT=/tmp/smartdrive-dev ./start.sh 8001
 ```
 
 Variables útiles:
@@ -152,15 +198,33 @@ Variables útiles:
 - `SMARTDRIVE_DEBUG`: activa modo debug (por defecto `0`).
 - `SMARTDRIVE_REQUEST_LOGGING`: activa middleware de trazas HTTP (por defecto hereda `SMARTDRIVE_DEBUG`).
 - `SMARTDRIVE_LOG_LEVEL`: fuerza nivel de log (`DEBUG`, `INFO`, `WARNING`, etc.).
+- `SMARTDRIVE_BASE_MOUNT`: sobreescribe la base de datos (`/mnt/midrive`) para usar otra ruta en local.
+- `SMARTDRIVE_PORT` / `SMARTDRIVE_HOST`: valores por defecto para `start.sh` si no se pasan parámetros.
+- `SMARTDRIVE_OWNER_IPS`: IPs consideradas "admin" para acceder al panel de control (CSV, por defecto `127.0.0.1,::1`).
+- `SMARTDRIVE_AUDIT_DIR`: directorio donde se guardan registros de accesos/acciones (por defecto `./.smartdrive_audit`, más rápido que usar discos externos).
+- `SMARTDRIVE_AUDIT_MAX_EVENTS`: máximo de eventos de auditoría persistidos.
+- `SMARTDRIVE_AUDIT_RECENT_LIMIT`: cuántos eventos recientes mostrar en el panel.
+- `SMARTDRIVE_NEW_VISITOR_WINDOW_HOURS`: ventana para marcar usuarios como "nuevos".
 
 Acceso local:
 
-- `http://TU_IP:8000`
+- `http://127.0.0.1:8001` (o el host/puerto que indiques)
 
 ## 🗂️ Estructura de datos
 
 - `/mnt/midrive/inbox`: archivos recién subidos.
 - `/mnt/midrive/files`: archivos catalogados.
+
+En desarrollo puedes aislar datos con `SMARTDRIVE_BASE_MOUNT` (por ejemplo `/tmp/smartdrive-dev`).
+
+## 🛂 Panel de control de accesos
+
+- URL: `/control`.
+- Muestra usuarios detectados de forma pasiva (cookie técnica + IP + user-agent + idioma, sin permisos del navegador).
+- Permite bloquear/desbloquear usuarios y marcar/quitar "admin" para excluir visitas de administración del portfolio.
+- Registra acciones clave: subir archivos (finalización), borrar, mover, renombrar, guardar portapapeles, descargar ZIP y vistas del portfolio.
+- Permite borrar registros globales o por usuario una vez revisados.
+- Estadísticas de portfolio excluyen automáticamente a usuarios marcados como admin.
 
 ## 🛣️ Roadmap de seguridad (portfolio)
 

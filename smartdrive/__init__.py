@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from smartdrive.infrastructure.access_control import setup_access_control
 from smartdrive.infrastructure.http_logging import setup_request_logging
 from smartdrive.infrastructure.logging import configure_logging, get_logger
 from smartdrive.infrastructure.runtime import app_lifespan
@@ -10,6 +11,7 @@ from smartdrive.infrastructure.settings import (
     SMARTDRIVE_DEBUG,
     SMARTDRIVE_REQUEST_LOGGING,
 )
+from smartdrive.presentation.routers.control_router import router as control_router
 from smartdrive.presentation.routers.drive_router import router as drive_router
 from smartdrive.presentation.routers.portfolio_router import router as portfolio_router
 
@@ -25,6 +27,7 @@ def create_app() -> FastAPI:
         openapi_url=None,
     )
 
+    setup_access_control(app)
     setup_request_logging(app, enabled=SMARTDRIVE_REQUEST_LOGGING)
 
     app.mount("/drive/inbox", StaticFiles(directory=INBOX_DIR, check_dir=False), name="drive-inbox")
@@ -32,6 +35,7 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory="static"), name="static")
 
     app.include_router(portfolio_router)
+    app.include_router(control_router)
     app.include_router(drive_router)
 
     logger.info(

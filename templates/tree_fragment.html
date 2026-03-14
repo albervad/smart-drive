@@ -28,7 +28,7 @@
         <div class="table-responsive">
             <table style="margin-bottom: 15px;">
                 {% for file in folder.files %}
-                <tr draggable="true" class="draggable-file" data-filepath="{{ file.download_url }}" data-zone="catalog" ondragstart="handleDragStart(event)">
+                <tr draggable="true" class="draggable-file" data-filepath="{{ file.relative_file_path }}" data-zone="catalog" ondragstart="handleDragStart(event)">
                     <td style="width: 50%; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">📄 {{ file.name }}</td>
                     <td style="color: var(--text-muted); text-align: right;">{{ file.size }}</td>
                     <td style="text-align: right;">
@@ -36,7 +36,7 @@
                             <div class="action-menu">
                                 <button class="btn-small btn-secondary menu-trigger" title="Acciones"
                                         data-menu-type="catalog-file"
-                                        data-item-path="{{ file.download_url }}"
+                                    data-item-path="{{ file.relative_file_path }}"
                                         onclick="return openActionMenuFromTrigger(this)">⋮</button>
                             </div>
                         </div>

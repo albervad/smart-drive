@@ -11,6 +11,18 @@ from smartdrive.infrastructure.settings import BASE_MOUNT, INBOX_DIR
 logger = get_logger("storage")
 
 
+def _count_tree_entries(tree: dict) -> tuple[int, int]:
+    folder_count = len(tree.get("subfolders", []))
+    file_count = len(tree.get("files", []))
+
+    for subfolder in tree.get("subfolders", []):
+        nested_folders, nested_files = _count_tree_entries(subfolder)
+        folder_count += nested_folders
+        file_count += nested_files
+
+    return folder_count, file_count
+
+
 def sanitize_input_path(user_input: str, base_dir: str) -> str:
     if not user_input:
         return base_dir
@@ -72,7 +84,8 @@ def list_inbox_files() -> list[dict]:
                 "name": file_name,
                 "size": format_size(os.path.getsize(file_path)),
                 "encoded_url": quote(file_name),
-                "download_url": quote(file_name),
+                "download_url": f"/drive/download/inbox/{quote(file_name)}",
+                "open_url": f"/drive/open/inbox/{quote(file_name)}",
             })
 
     logger.debug(
@@ -84,6 +97,10 @@ def list_inbox_files() -> list[dict]:
 
 
 def build_recursive_tree(base_path: str, relative_path: str = "") -> dict:
+    is_root_call = relative_path == ""
+    if is_root_call:
+        logger.debug("Loading catalog tree from base_path=%s", base_path)
+
     tree = {
         "name": os.path.basename(base_path),
         "relative_path": relative_path,
@@ -106,15 +123,27 @@ def build_recursive_tree(base_path: str, relative_path: str = "") -> dict:
                     tree["files"].append({
                         "name": item,
                         "size": format_size(os.path.getsize(full_path)),
-                        "download_url": quote(next_relative_path.replace("\\", "/")),
+                        "relative_file_path": quote(next_relative_path.replace("\\", "/")),
+                        "download_url": f"/drive/download/catalog/{quote(next_relative_path.replace('\\', '/'))}",
+                        "open_url": f"/drive/open/catalog/{quote(next_relative_path.replace('\\', '/'))}",
                     })
         except PermissionError:
-            pass
+            logger.warning("Permission denied while reading catalog path: %s", base_path)
+
+    if is_root_call:
+        folder_count, file_count = _count_tree_entries(tree)
+        logger.debug(
+            "Catalog tree loaded. folders=%s files=%s base_path=%s",
+            folder_count,
+            file_count,
+            base_path,
+        )
 
     return tree
 
 
 def list_flat_folders(base_path: str) -> list[str]:
+    logger.debug("Loading flat folder list from base_path=%s", base_path)
     folders = ["."]
     if os.path.exists(base_path):
         for root, dirs, _ in os.walk(base_path):
@@ -128,7 +157,14 @@ def list_flat_folders(base_path: str) -> list[str]:
                     if normalized_path.startswith("./"):
                         normalized_path = normalized_path[2:]
                     folders.append(normalized_path)
-    return natsorted(folders)
+
+    sorted_folders = natsorted(folders)
+    logger.debug(
+        "Flat folder list loaded. folders=%s base_path=%s",
+        len(sorted_folders),
+        base_path,
+    )
+    return sorted_folders
 
 
 def generate_unique_name(base_path: str, filename: str) -> tuple[str, str]:

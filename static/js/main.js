@@ -156,7 +156,7 @@ async function copyLocalClipboard() {
     if (!textArea) return;
 
     if (!navigator.clipboard || !navigator.clipboard.writeText) {
-        setClipboardStatus('Tu navegador no permite copiar automáticamente.', true);
+        setClipboardStatus('Este navegador no permite copiar automáticamente.', true);
         return;
     }
 
@@ -173,7 +173,7 @@ async function pasteLocalClipboard() {
     if (!textArea) return;
 
     if (!navigator.clipboard || !navigator.clipboard.readText) {
-        setClipboardStatus('Tu navegador no permite pegar automáticamente.', true);
+        setClipboardStatus('Este navegador no permite pegar automáticamente.', true);
         return;
     }
 
@@ -285,14 +285,14 @@ function renderSearchResults(results, query) {
         actionWrap.className = 'table-actions';
 
         const btnDownload = document.createElement('a');
-        btnDownload.href = item.url;
+        btnDownload.href = item.download_url;
         btnDownload.className = 'btn-action btn-small btn-secondary';
         btnDownload.setAttribute('download', item.name);
         btnDownload.title = 'Descargar';
         btnDownload.textContent = 'Descargar';
 
         const btnOpen = document.createElement('a');
-        btnOpen.href = item.url;
+        btnOpen.href = item.open_url;
         btnOpen.className = 'btn-action btn-small btn-secondary';
         btnOpen.target = '_blank';
         btnOpen.rel = 'noopener';
@@ -627,8 +627,8 @@ window.openActionMenu = function(event, triggerBtn) {
             actions.push({ label: 'Borrar', danger: true, handler: () => deleteFolder(itemPath) });
         }
     } else if (menuType === 'catalog-file') {
-        actions.push({ label: 'Descargar', danger: false, handler: () => downloadFile(`/drive/files/${itemPath}`) });
-        actions.push({ label: 'Abrir', danger: false, handler: () => openFile(`/drive/files/${itemPath}`) });
+        actions.push({ label: 'Descargar', danger: false, handler: () => downloadFile(`/drive/download/catalog/${itemPath}`) });
+        actions.push({ label: 'Abrir', danger: false, handler: () => openFile(`/drive/open/catalog/${itemPath}`) });
         actions.push({ label: 'Renombrar', danger: false, handler: () => renameCatalogFile(itemPath) });
         actions.push({ label: 'Borrar', danger: true, handler: () => deleteCatalogFile(itemPath) });
     }

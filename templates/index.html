@@ -252,7 +252,7 @@
                     {% for file in folder.files %}
                     <tr draggable="true" 
                         class="draggable-file" 
-                        data-filepath="{{ file.download_url }}"
+                        data-filepath="{{ file.relative_file_path }}"
                         data-zone="catalog"  
                         ondragstart="handleDragStart(event)">
                         
@@ -263,7 +263,7 @@
                                 <div class="action-menu">
                                     <button class="btn-small btn-secondary menu-trigger" title="Acciones"
                                             data-menu-type="catalog-file"
-                                            data-item-path="{{ file.download_url }}"
+                                            data-item-path="{{ file.relative_file_path }}"
                                             onclick="return openActionMenuFromTrigger(this)">⋮</button>
                                 </div>
                             </div>
@@ -280,7 +280,10 @@
     <div class="container">
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 25px;">
             <h1 style="margin: 0; padding: 0; border-bottom: none;">Raspberry Drive System</h1>
-            <a href="/" class="btn-action btn-secondary">Portfolio / CV</a>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <a href="/control" class="btn-action btn-secondary">Panel de control</a>
+                <a href="/" class="btn-action btn-secondary">Portfolio / CV</a>
+            </div>
         </div>
         <div class="tabs-nav" role="tablist" aria-label="Navegación principal">
             <button type="button" class="tab-btn active" data-tab="files">Archivos</button>
@@ -332,10 +335,10 @@
                                 <td style="color: var(--text-muted); white-space: nowrap;">{{ file.size }}</td>
                                 <td style="padding-right: 10px;">
                                     <div class="table-actions">
-                                        <a href="/drive/inbox/{{ file.encoded_url }}" download="{{ file.name }}" class="btn-action btn-small btn-secondary" title="Descargar">
+                                        <a href="{{ file.download_url }}" download="{{ file.name }}" class="btn-action btn-small btn-secondary" title="Descargar">
                                             <svg class="icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
                                         </a>
-                                        <a href="/drive/inbox/{{ file.encoded_url }}" target="_blank" rel="noopener" class="btn-action btn-small btn-secondary" title="Abrir">
+                                        <a href="{{ file.open_url }}" target="_blank" rel="noopener" class="btn-action btn-small btn-secondary" title="Abrir">
                                             <svg class="icon" viewBox="0 0 24 24"><path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3zM5 5h6v2H7v10h10v-4h2v6H5V5z"/></svg>
                                         </a>
                                         <button class="btn-small btn-secondary" onclick="moveFile('{{ file.name }}')">Mover</button>

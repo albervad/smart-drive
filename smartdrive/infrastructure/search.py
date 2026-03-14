@@ -157,7 +157,8 @@ def search_files(query: str, mode: str = "both") -> list[dict]:
                     continue
 
                 encoded_url = quote(relative_path)
-                open_url = f"/drive/inbox/{encoded_url}" if zone == "inbox" else f"/drive/files/{encoded_url}"
+                open_url = f"/drive/open/{zone}/{encoded_url}"
+                download_url = f"/drive/download/{zone}/{encoded_url}"
 
                 match_types = []
                 if matches_name:
@@ -170,7 +171,8 @@ def search_files(query: str, mode: str = "both") -> list[dict]:
                     "name": file_name,
                     "relative_path": relative_path,
                     "size": format_size(os.path.getsize(absolute_path)),
-                    "url": open_url,
+                    "open_url": open_url,
+                    "download_url": download_url,
                     "match_type": " + ".join(match_types),
                     "snippet": snippet,
                 })

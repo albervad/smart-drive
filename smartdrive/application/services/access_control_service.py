@@ -1,0 +1,46 @@
+from typing import Any
+
+from smartdrive.infrastructure.access_control import (
+    clear_action_events,
+    clear_detected_visitors,
+    get_control_panel_data,
+    record_action_event,
+    set_visitor_block_state,
+    set_visitor_owner_state,
+)
+
+
+def get_access_control_dashboard(non_owner_only: bool = False) -> dict[str, Any]:
+    return get_control_panel_data(non_owner_only=non_owner_only)
+
+
+def track_user_action(
+    visitor_id: str | None,
+    action: str,
+    path: str,
+    details: dict[str, Any] | None = None,
+    status: str = "ok",
+) -> None:
+    record_action_event(
+        visitor_id=visitor_id,
+        action=action,
+        path=path,
+        details=details,
+        status=status,
+    )
+
+
+def update_visitor_block_state(visitor_id: str, blocked: bool) -> bool:
+    return set_visitor_block_state(visitor_id, blocked)
+
+
+def update_visitor_owner_state(visitor_id: str, is_owner: bool) -> bool:
+    return set_visitor_owner_state(visitor_id, is_owner)
+
+
+def clear_event_records(visitor_id: str | None = None) -> int:
+    return clear_action_events(visitor_id=visitor_id)
+
+
+def clear_detected_users() -> int:
+    return clear_detected_visitors()
