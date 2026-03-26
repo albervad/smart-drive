@@ -747,13 +747,13 @@
                         </ul>
                     </div>
                     <div class="project-card">
-                        <h3>Análisis de vulnerabilidad lógica y evasión de Firewall (Steam)</h3>
-                        <p class="small">Investigación técnica del flujo de validación de Steam Family y reproducción controlada de un bypass basado en reglas de red.</p>
+                        <h3>Análisis de lógica de negocio y validación de controles (Steam Family)</h3>
+                        <p class="small">Investigación técnica de resiliencia funcional en un flujo real de validación, con pruebas controladas en entorno de laboratorio.</p>
                         <ul>
                             <li>Identificación del punto lógico de validación de estado de usuarios del grupo familiar.</li>
-                            <li>Diseño de prueba controlada para bloquear tráfico crítico y forzar uso simultáneo no previsto.</li>
-                            <li>Implementación de PoC en launcher para replicar el escenario con reglas de firewall reproducibles.</li>
-                            <li>Caso útil como entrenamiento en lógica de negocio, modelado de abuso y validación de mitigaciones.</li>
+                            <li>Diseño de prueba controlada para validar consistencia de controles ante condiciones de red adversas.</li>
+                            <li>Implementación de PoC reproducible para análisis técnico y verificación de hipótesis.</li>
+                            <li>Caso aplicado para entrenamiento en modelado de abuso, impacto y validación de mitigaciones.</li>
                         </ul>
                     </div>
                     <div class="project-card">
@@ -773,8 +773,18 @@
                             <li>Desarrollo enfocado a seguridad y realización de auditorías constantes.</li>
                             <li>Uso continuo como entorno de aprendizaje.</li>
                             <li>Usado como laboratorio de pruebas de seguridad.</li>
-                            <li>Migración planificada a Ubuntu x86/x64 para ganar estabilidad en streaming.</li>
-                            <li>Optimización energética en portátil reutilizado (GPU dedicada en blacklist y batería como SAI).</li>
+                        </ul>
+                    </div>
+                    <div class="project-card">
+                        <h3>Servidor de streaming autohospedado</h3>
+                        <p class="small">Stack multimedia orientado a automatización, trazabilidad y operación estable en entorno doméstico.</p>
+                        <ul>
+                            <li><span class="highlight">Jellyfin</span> como servidor de reproducción y biblioteca central.</li>
+                            <li><span class="highlight">Jellyseerr (Jellyseer)</span> para gestión de solicitudes y flujo de aprobaciones.</li>
+                            <li><span class="highlight">Radarr + Sonarr</span> para orquestación automática de películas y series.</li>
+                            <li><span class="highlight">Jackett (Jacket)</span> como capa de indexación unificada para buscadores.</li>
+                            <li><span class="highlight">qBittorrent</span> como motor de descarga con políticas de control y seguimiento.</li>
+                            <li>Diseño modular para facilitar diagnóstico, mantenimiento y escalado por componentes.</li>
                         </ul>
                     </div>
                 </div>
@@ -824,16 +834,14 @@
                 <h2>Proyecto destacado: Raspberry Pi Smart Drive</h2>
                 <p>
                     Plataforma de almacenamiento personal que también uso como entorno de laboratorio para auditarme,
-                    practicar pruebas de seguridad y mejorar tanto la parte ofensiva como la robustez del backend,
-                    ahora con estrategia de migración a Ubuntu para reducir cuellos de botella de streaming.
+                    practicar pruebas de seguridad y mejorar tanto la parte ofensiva como la robustez del backend.
                 </p>
                 <div style="height: 14px;"></div>
                 <ul class="list">
                     <li><span class="ok">✔</span> Desarrollo completo de backend y frontend orientado a uso real.</li>
                     <li><span class="ok">✔</span> Base para pruebas de seguridad en entorno controlado.</li>
                     <li><span class="ok">✔</span> Funcionalidades de gestión de archivos y búsqueda para escenarios de laboratorio.</li>
-                    <li><span class="ok">✔</span> Despliegue en Raspberry Pi con ejecución persistente y mantenimiento.</li>
-                    <li><span class="ok">✔</span> Compatibilidad de instalación con Ubuntu/Debian x86/x64 mediante swapfile estándar.</li>
+                    <li><span class="ok">✔</span> Despliegue inicial en Raspberry Pi y migración posterior a Ubuntu Server para mejorar rendimiento.</li>
                 </ul>
             </article>
 
@@ -853,12 +861,26 @@
                         <span class="small">Uso del proyecto como base para autoauditoría y mejora de metodología ofensiva.</span>
                     </div>
                     <div class="timeline-item">
-                        <strong>Fase 4 · Migración e infraestructura resiliente</strong>
-                        <span class="small">Port a Ubuntu x86/x64 para evitar colapsos en streaming, con GTX 1050 desactivada para ahorro y batería interna como SAI.</span>
+                        <strong>Próximo paso</strong>
+                        <span class="small">Más máquinas, más writeups y pruebas técnicas documentadas.</span>
+                    </div>
+                </div>
+            </article>
+
+            <article id="noticias" class="card col-12 reveal">
+                <h2>Noticias técnicas</h2>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <strong>Migración de infraestructura por rendimiento (marzo 2026)</strong>
+                        <span class="small">Tras detectar cuellos de botella en el servidor de streaming bajo carga concurrente, se decidió migrar la plataforma desde Raspberry Pi a un portátil reacondicionado con Ubuntu Server para ganar margen en CPU, I/O y estabilidad operativa.</span>
                     </div>
                     <div class="timeline-item">
-                        <strong>Próximo paso</strong>
-                        <span class="small">Automatizar wake-up de contingencia con ESP32 y seguir ampliando writeups técnicos.</span>
+                        <strong>Adaptación a nueva arquitectura</strong>
+                        <span class="small">La migración implicó ajustar rutas, servicio de arranque, automatizaciones y dependencias para una arquitectura distinta, manteniendo continuidad de datos y minimizando el tiempo de indisponibilidad.</span>
+                    </div>
+                    <div class="timeline-item">
+                        <strong>Resultado</strong>
+                        <span class="small">Mejora medible en tiempos de respuesta del stack de streaming (Jellyfin, Jellyseerr, Radarr, Sonarr, Jackett y qBittorrent) y mayor capacidad para seguir iterando en hardening y observabilidad.</span>
                     </div>
                 </div>
             </article>

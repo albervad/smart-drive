@@ -4,7 +4,8 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 TARGET_REF="${1:-main}"
-PROD_DIR="${SMARTDRIVE_PROD_DIR:-/home/alberto/mydrive-prod-main}"
+DEFAULT_PROD_DIR="$HOME/mydrive-prod-main"
+PROD_DIR="${SMARTDRIVE_PROD_DIR:-$DEFAULT_PROD_DIR}"
 SERVICE_NAME="${SMARTDRIVE_SERVICE_NAME:-smartdrive}"
 
 if ! git -C "$REPO_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -25,7 +26,18 @@ if [[ ! -d "$PROD_DIR/venv" ]]; then
 fi
 
 source "$PROD_DIR/venv/bin/activate"
+python -m pip install --upgrade pip
 python -m pip install -r "$PROD_DIR/requirements.txt"
+
+if ! command -v systemctl >/dev/null 2>&1; then
+  echo "Error: systemctl no está disponible en este sistema."
+  exit 1
+fi
+
+if ! systemctl list-unit-files | grep -q "^${SERVICE_NAME}\.service"; then
+  echo "Error: no existe ${SERVICE_NAME}.service en systemd."
+  exit 1
+fi
 
 sudo systemctl restart "$SERVICE_NAME"
 

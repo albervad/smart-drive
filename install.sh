@@ -27,6 +27,11 @@ CURRENT_DIR=$(pwd)
 echo -e "${GREEN}>>> Iniciando instalación para el usuario: ${CYAN}$REAL_USER${NC}"
 echo -e "${GREEN}>>> Directorio de instalación: ${CYAN}$CURRENT_DIR${NC}"
 
+if [[ "$(uname -s)" != "Linux" ]]; then
+    echo -e "${RED}Este instalador solo está soportado en Linux.${NC}"
+    exit 1
+fi
+
 # Detectar si estamos en una Raspberry Pi
 IS_RASPBERRY_PI=0
 if grep -qi "raspberry pi" /proc/device-tree/model 2>/dev/null; then
@@ -41,24 +46,83 @@ else
     echo -e "${GREEN}>>> Plataforma detectada: ${CYAN}Linux genérico (no Raspberry Pi)${NC}"
 fi
 
+# Detectar gestor de paquetes disponible
+PKG_MANAGER=""
+if command -v apt-get >/dev/null 2>&1; then
+    PKG_MANAGER="apt"
+elif command -v dnf >/dev/null 2>&1; then
+    PKG_MANAGER="dnf"
+elif command -v yum >/dev/null 2>&1; then
+    PKG_MANAGER="yum"
+elif command -v pacman >/dev/null 2>&1; then
+    PKG_MANAGER="pacman"
+elif command -v zypper >/dev/null 2>&1; then
+    PKG_MANAGER="zypper"
+elif command -v apk >/dev/null 2>&1; then
+    PKG_MANAGER="apk"
+else
+    echo -e "${RED}No se encontró un gestor de paquetes soportado (apt, dnf, yum, pacman, zypper, apk).${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}>>> Gestor de paquetes detectado: ${CYAN}$PKG_MANAGER${NC}"
+
+install_dependencies() {
+    case "$PKG_MANAGER" in
+        apt)
+            apt-get update
+            if [[ "$IS_RASPBERRY_PI" == "1" ]]; then
+                apt-get install -y python3 python3-pip python3-venv git dphys-swapfile cron
+            else
+                apt-get install -y python3 python3-pip python3-venv git cron
+            fi
+            ;;
+        dnf)
+            dnf -y install python3 python3-pip git cronie
+            ;;
+        yum)
+            yum -y install python3 python3-pip git cronie
+            ;;
+        pacman)
+            pacman -Sy --noconfirm python python-pip git cronie
+            ;;
+        zypper)
+            zypper --non-interactive install python3 python3-pip python3-virtualenv git cron
+            ;;
+        apk)
+            apk update
+            apk add python3 py3-pip py3-virtualenv git dcron
+            ;;
+    esac
+}
+
+ensure_cron_service() {
+    if ! command -v systemctl >/dev/null 2>&1; then
+        echo -e "${YELLOW}>>> systemctl no disponible. Revisa manualmente el servicio de cron en tu sistema.${NC}"
+        return
+    fi
+
+    for service in cron crond; do
+        if systemctl list-unit-files | grep -q "^${service}\.service"; then
+            systemctl enable --now "$service" || true
+            echo -e "${GREEN}>>> Servicio ${CYAN}${service}${GREEN} habilitado para tareas programadas.${NC}"
+            return
+        fi
+    done
+
+    echo -e "${YELLOW}>>> No se encontró un servicio cron reconocido (cron/crond).${NC}"
+}
+
 # ---------------------------------------------------------
 # 1. ACTUALIZACIÓN Y DEPENDENCIAS
 # ---------------------------------------------------------
-echo -e "${YELLOW}[1/5] Actualizando sistema e instalando paquetes necesarios...${NC}"
-apt update
-# git: control de versiones
-# python3-venv: entornos virtuales
-# dphys-swapfile: gestor de swap (solo Raspberry Pi)
-if [[ "$IS_RASPBERRY_PI" == "1" ]]; then
-    apt install -y python3-pip python3-venv git dphys-swapfile
-else
-    apt install -y python3-pip python3-venv git
-fi
+echo -e "${YELLOW}[1/6] Actualizando sistema e instalando paquetes necesarios...${NC}"
+install_dependencies
 
 # ---------------------------------------------------------
 # 2. CONFIGURACIÓN INTERACTIVA DE SWAP
 # ---------------------------------------------------------
-echo -e "${YELLOW}[2/5] Configuración de Memoria Virtual (SWAP)${NC}"
+echo -e "${YELLOW}[2/6] Configuración de Memoria Virtual (SWAP)${NC}"
 echo "Se recomienda SWAP extra para procesar subidas de archivos grandes."
 echo -e "Recomendado: ${CYAN}2048${NC} (2GB) para uso normal."
 
@@ -76,7 +140,7 @@ else
     echo -e ">> Configurando SWAP a: ${CYAN}$SWAP_SIZE MB${NC}"
 fi
 
-if [[ "$IS_RASPBERRY_PI" == "1" ]]; then
+if [[ "$IS_RASPBERRY_PI" == "1" ]] && command -v dphys-swapfile >/dev/null 2>&1; then
     # --- Raspberry Pi: usar dphys-swapfile ---
     dphys-swapfile swapoff
     if grep -q "^CONF_SWAPSIZE=" /etc/dphys-swapfile; then
@@ -87,7 +151,7 @@ if [[ "$IS_RASPBERRY_PI" == "1" ]]; then
     dphys-swapfile setup
     dphys-swapfile swapon
 else
-    # --- Linux genérico (Ubuntu, Debian, etc.): usar swapfile estándar ---
+    # --- Linux genérico o Raspberry sin dphys-swapfile: usar swapfile estándar ---
     SWAPFILE="/swapfile"
     SWAP_BYTES=$(( SWAP_SIZE * 1024 * 1024 ))
     if swapon --show | grep -q "$SWAPFILE"; then
@@ -114,7 +178,7 @@ fi
 # ---------------------------------------------------------
 # 3. CREACIÓN DE CARPETAS Y PERMISOS
 # ---------------------------------------------------------
-echo -e "${YELLOW}[3/5] Configurando almacenamiento en /mnt/midrive...${NC}"
+echo -e "${YELLOW}[3/6] Configurando almacenamiento en /mnt/midrive...${NC}"
 mkdir -p /mnt/midrive/inbox
 mkdir -p /mnt/midrive/files
 
@@ -125,7 +189,7 @@ echo -e "${GREEN}>>> Carpetas listas.${NC}"
 # ---------------------------------------------------------
 # 4. ENTORNO VIRTUAL PYTHON
 # ---------------------------------------------------------
-echo -e "${YELLOW}[4/5] Instalando entorno Python...${NC}"
+echo -e "${YELLOW}[4/6] Instalando entorno Python...${NC}"
 
 # Creamos el venv como el usuario REAL, no como root, para evitar problemas de permisos futuros
 # Usamos 'su' para ejecutar el comando como el usuario normal
@@ -148,13 +212,18 @@ su - "$REAL_USER" -c "cd \"$CURRENT_DIR\" && . venv/bin/activate && python -m pi
 # ---------------------------------------------------------
 # 5. CREAR SERVICIO SYSTEMD (AUTO-ARRANQUE)
 # ---------------------------------------------------------
-echo -e "${YELLOW}[5/5] Creando servicio de auto-arranque...${NC}"
+echo -e "${YELLOW}[5/6] Creando servicio de auto-arranque...${NC}"
+
+if ! command -v systemctl >/dev/null 2>&1; then
+    echo -e "${RED}Este instalador requiere systemd (systemctl) para configurar el servicio smartdrive.${NC}"
+    exit 1
+fi
 
 SERVICE_FILE="/etc/systemd/system/smartdrive.service"
 
 cat > $SERVICE_FILE <<EOF
 [Unit]
-Description=Raspberry Pi Smart Drive Server
+Description=Smart Drive Server
 After=network.target
 
 [Service]
@@ -185,7 +254,13 @@ echo -e "${YELLOW}[6/6] Configurando limpieza automática de archivos temporales
 
 # Tarea: Ejecutar cada día a las 04:00 AM
 # Comando: Buscar en inbox archivos terminados en .part modificados hace más de 1 día (+1) y borrarlos.
+if ! command -v crontab >/dev/null 2>&1; then
+    echo -e "${RED}No se encontró crontab. Instala un servicio cron y vuelve a ejecutar el instalador.${NC}"
+    exit 1
+fi
+
 (crontab -l 2>/dev/null; echo "0 4 * * * find /mnt/midrive/inbox -name '*.part' -type f -mtime +1 -delete") | sort -u | crontab -
+ensure_cron_service
 
 echo -e "${GREEN}>>> Tarea programada: Limpieza de .part antiguos (24h) a las 04:00 AM.${NC}"
 echo -e "${GREEN}==============================================${NC}"
