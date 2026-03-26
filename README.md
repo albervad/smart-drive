@@ -1,6 +1,6 @@
-# 🍓 Raspberry Pi Smart Drive (Security-Focused)
+# 🍓 Raspberry Smart Drive (Security-Focused)
 
-Proyecto de almacenamiento personal en Raspberry Pi con frontend web y backend FastAPI, diseñado con enfoque en **seguridad defensiva aplicada**: validación de rutas, control de superficie de búsqueda de contenido y despliegue seguro sin exponer puertos.
+Proyecto de almacenamiento personal con frontend web y backend FastAPI, diseñado con enfoque en **seguridad defensiva aplicada**: validación de rutas, control de superficie de búsqueda de contenido y despliegue seguro sin exponer puertos.
 
 <img width="735" height="875" alt="image" src="https://github.com/user-attachments/assets/560fe466-ab5e-42f8-bfa2-d57f9930c62e" />
 
@@ -12,6 +12,18 @@ Construir un servicio de archivos autohospedado que sea útil en casa/lab y, al 
 - Diseño de controles básicos de hardening en backend.
 - Reducción de riesgos típicos (Path Traversal, lectura fuera de base, abuso de búsqueda).
 - Exposición remota con acceso seguro (Zero Trust / red privada).
+
+## 🚚 Migración y rendimiento (Marzo 2026)
+
+- Se mantiene una rama remota de compatibilidad pendiente de merge por PR: `copilot/check-ubuntu-server-compatibility`.
+- El instalador detecta automáticamente plataforma:
+   - Raspberry Pi: mantiene flujo con `dphys-swapfile`.
+   - Ubuntu/Debian genérico (x86/x86_64): usa `/swapfile` estándar con `fallocate`, `mkswap` y persistencia en `/etc/fstab`.
+- Esta adaptación permite migrar el servicio a Ubuntu x86/x64 para mejorar estabilidad de streaming y evitar colapsos por memoria en picos de carga.
+- Infraestructura objetivo de bajo consumo en portátil reutilizado:
+   - GPU NVIDIA GTX 1050 Laptop desactivada mediante blacklist para reducir consumo.
+   - Batería interna operando como SAI de respaldo ante microcortes.
+   - Integración prevista de ESP32 como despertador/recuperación si la caída eléctrica se prolonga.
 
 ## 🧩 Funcionalidades principales
 
@@ -95,8 +107,8 @@ Recomendación: mantener esta allowlist y revisar cada cambio de rutas antes de 
 
 ## 🛠️ Requisitos
 
-- Raspberry Pi con Python 3.
-- Debian/Raspberry Pi OS con `sudo`.
+- Python 3.
+- Debian/Ubuntu/Raspberry Pi OS con `sudo`.
 - Disco/pendrive montado en `/mnt/midrive`.
 
 ## 🚀 Instalación rápida
