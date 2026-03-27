@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Raspberry Smart Drive</title>
+    <link rel="icon" type="image/png" href="/static/img/icon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b1220;
+            --card: rgba(16, 24, 40, 0.82);
+            --card-strong: #111b2d;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #5ca7ff;
+            --accent-hover: #3f91f0;
+            --border: rgba(148, 163, 184, 0.22);
+            --radius: 12px;
+            --shadow: 0 12px 30px rgba(2, 8, 23, 0.3);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-main);
+            background:
+                radial-gradient(900px 420px at 8% -8%, rgba(92, 167, 255, 0.22), transparent 60%),
+                radial-gradient(900px 480px at 90% -15%, rgba(79, 70, 229, 0.18), transparent 65%),
+                var(--bg);
+            padding: 18px;
+            line-height: 1.55;
+        }
+
+        .container {
+            width: min(1400px, 96vw);
+            margin: 0 auto;
+            animation: fadeIn 0.55s ease-out both;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(1.3rem, 2.8vw, 1.85rem);
+            letter-spacing: 0.02em;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            text-decoration: none;
+            padding: 9px 13px;
+            background: rgba(17, 27, 45, 0.62);
+            font-weight: 600;
+            transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+            background: rgba(92, 167, 255, 0.16);
+        }
+
+        .panel {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 16px;
+            margin-bottom: 14px;
+            backdrop-filter: blur(6px);
+        }
+
+        .selector-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .selector-row label {
+            color: var(--text-muted);
+            font-size: 0.88rem;
+        }
+
+        .selector-row select {
+            background: var(--card-strong);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 11px;
+            font-family: inherit;
+            font-weight: 600;
+            min-width: 210px;
+            outline: none;
+        }
+
+        .selector-row select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(92, 167, 255, 0.2);
+        }
+
+        .current-target {
+            color: var(--text-muted);
+            font-size: 0.86rem;
+        }
+
+        .section-title {
+            margin: 0 0 10px;
+            font-size: 0.96rem;
+            letter-spacing: 0.01em;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 10px;
+        }
+
+        .service-link {
+            display: grid;
+            gap: 6px;
+            text-decoration: none;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 13px;
+            background: rgba(15, 23, 42, 0.56);
+            color: var(--text-main);
+            transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .service-link:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+            background: rgba(92, 167, 255, 0.16);
+        }
+
+        .service-link strong {
+            font-size: 0.95rem;
+        }
+
+        .service-link span {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+            gap: 10px;
+        }
+
+        .stat-card {
+            background: rgba(15, 23, 42, 0.58);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .stat-value {
+            margin-top: 6px;
+            font-size: 1.35rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .stat-subvalue {
+            margin-top: 6px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            line-height: 1.35;
+        }
+
+        .bar-label {
+            margin-top: 11px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        .usage-bar {
+            margin-top: 6px;
+            width: 100%;
+            height: 8px;
+            border-radius: 999px;
+            background: rgba(148, 163, 184, 0.16);
+            overflow: hidden;
+        }
+
+        .usage-bar > span {
+            display: block;
+            height: 100%;
+            border-radius: inherit;
+            width: 0;
+            background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+            transition: width 0.35s ease;
+        }
+
+        .stats-meta {
+            margin-top: 10px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        .gpu-list {
+            margin-top: 12px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .gpu-item {
+            background: rgba(15, 23, 42, 0.45);
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            padding: 9px 10px;
+        }
+
+        .gpu-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(14px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 640px) {
+            body { padding: 10px; }
+            .panel { padding: 14px; }
+            .nav-links { width: 100%; }
+            .btn { flex: 1 1 calc(50% - 4px); }
+            .selector-row select { min-width: 170px; }
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <header class="topbar">
+            <h1>Dashboard de Servicios</h1>
+            <nav class="nav-links" aria-label="Navegacion principal">
+                <a class="btn" href="/">Portfolio</a>
+                <a class="btn" href="/drive/">Drive</a>
+            </nav>
+        </header>
+
+        <section class="panel" aria-labelledby="stats-title">
+            <h2 id="stats-title" class="section-title">Estadisticas del sistema</h2>
+            <div class="stats-grid">
+                <article class="stat-card">
+                    <div class="stat-label">Temperatura CPU</div>
+                    <div class="stat-value" id="temp-value">N/D</div>
+                </article>
+                <article class="stat-card">
+                    <div class="stat-label">Consumo de energia</div>
+                    <div class="stat-value" id="power-value">N/D</div>
+                </article>
+                <article class="stat-card">
+                    <div class="stat-label">Coste estimado</div>
+                    <div class="stat-value" id="cost-value">N/D</div>
+                    <div class="stat-subvalue" id="cost-detail">Real acumulado del mes: N/D</div>
+                </article>
+                <article class="stat-card">
+                    <div class="stat-label">Uptime</div>
+                    <div class="stat-value" id="uptime-value">N/D</div>
+                </article>
+                <article class="stat-card">
+                    <div class="stat-label">Bateria</div>
+                    <div class="stat-value" id="battery-value">N/D</div>
+                    <div class="stat-subvalue" id="battery-detail">Estado: N/D</div>
+                </article>
+                <article class="stat-card">
+                    <div class="stat-label">Salud bateria</div>
+                    <div class="stat-value" id="battery-health-value">N/D</div>
+                    <div class="stat-subvalue" id="battery-power-value">Potencia: N/D</div>
+                </article>
+            </div>
+
+            <div class="bar-label">
+                <span>Uso CPU</span>
+                <strong id="cpu-percent-label">0%</strong>
+            </div>
+            <div class="usage-bar"><span id="cpu-bar"></span></div>
+
+            <div class="bar-label">
+                <span>Uso RAM</span>
+                <strong id="ram-percent-label">0%</strong>
+            </div>
+            <div class="usage-bar"><span id="ram-bar"></span></div>
+
+            <div class="bar-label">
+                <span>Uso disco</span>
+                <strong id="disk-percent-label">0%</strong>
+            </div>
+            <div class="usage-bar"><span id="disk-bar"></span></div>
+
+            <div class="bar-label" style="margin-top: 14px;">
+                <span>Uso de graficas detectadas</span>
+            </div>
+
+            <div id="gpu-usage-list" class="gpu-list"></div>
+
+            <p class="stats-meta" id="stats-meta">Actualizando estadisticas...</p>
+        </section>
+
+        <section class="panel" aria-labelledby="environment-title">
+            <h2 id="environment-title" class="section-title">Entorno de conexion</h2>
+            <div class="selector-row">
+                <label for="network-target">Selecciona red destino:</label>
+                <select id="network-target">
+                    <option value="192.168.1.47" selected>Local (192.168.1.47)</option>
+                    <option value="199.68.161.18">Remota (199.68.161.18)</option>
+                </select>
+                <span class="current-target">Host activo: <strong id="current-host">192.168.1.47</strong></span>
+            </div>
+        </section>
+
+        <section class="panel" aria-labelledby="services-title">
+            <h2 id="services-title" class="section-title">Aplicaciones multimedia</h2>
+            <div class="grid" id="services-grid">
+                <a class="service-link" data-port="5055" href="http://192.168.1.47:5055" target="_blank" rel="noopener">
+                    <strong>Jellyseerr</strong>
+                    <span>Puerto 5055</span>
+                </a>
+                <a class="service-link" data-port="8096" href="http://192.168.1.47:8096" target="_blank" rel="noopener">
+                    <strong>Jellyfin</strong>
+                    <span>Puerto 8096</span>
+                </a>
+                <a class="service-link" data-port="7878" href="http://192.168.1.47:7878" target="_blank" rel="noopener">
+                    <strong>Radarr</strong>
+                    <span>Puerto 7878</span>
+                </a>
+                <a class="service-link" data-port="8989" href="http://192.168.1.47:8989" target="_blank" rel="noopener">
+                    <strong>Sonarr</strong>
+                    <span>Puerto 8989</span>
+                </a>
+                <a class="service-link" data-port="9117" href="http://192.168.1.47:9117" target="_blank" rel="noopener">
+                    <strong>Jackett</strong>
+                    <span>Puerto 9117</span>
+                </a>
+                <a class="service-link" data-port="8080" href="http://192.168.1.47:8080" target="_blank" rel="noopener">
+                    <strong>qBittorrent</strong>
+                    <span>Puerto 8080</span>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const networkTargetSelect = document.getElementById('network-target');
+        const currentHostElement = document.getElementById('current-host');
+        const serviceLinks = document.querySelectorAll('.service-link');
+
+        const tempValue = document.getElementById('temp-value');
+        const powerValue = document.getElementById('power-value');
+        const costValue = document.getElementById('cost-value');
+        const costDetail = document.getElementById('cost-detail');
+        const uptimeValue = document.getElementById('uptime-value');
+        const batteryValue = document.getElementById('battery-value');
+        const batteryDetail = document.getElementById('battery-detail');
+        const batteryHealthValue = document.getElementById('battery-health-value');
+        const batteryPowerValue = document.getElementById('battery-power-value');
+        const cpuPercentLabel = document.getElementById('cpu-percent-label');
+        const ramPercentLabel = document.getElementById('ram-percent-label');
+        const diskPercentLabel = document.getElementById('disk-percent-label');
+        const cpuBar = document.getElementById('cpu-bar');
+        const ramBar = document.getElementById('ram-bar');
+        const diskBar = document.getElementById('disk-bar');
+        const gpuUsageList = document.getElementById('gpu-usage-list');
+        const statsMeta = document.getElementById('stats-meta');
+
+        function formatPercent(value) {
+            if (typeof value !== 'number' || Number.isNaN(value)) {
+                return '0%';
+            }
+            return value.toFixed(1) + '%';
+        }
+
+        function clampPercent(value) {
+            if (typeof value !== 'number' || Number.isNaN(value)) {
+                return 0;
+            }
+            return Math.max(0, Math.min(100, value));
+        }
+
+        function setUsageBar(element, value) {
+            element.style.width = clampPercent(value).toFixed(1) + '%';
+        }
+
+        function formatPower(value) {
+            if (typeof value !== 'number' || Number.isNaN(value) || value < 0) {
+                return 'N/D';
+            }
+            if (value >= 1000) {
+                return (value / 1000).toFixed(2) + ' kW';
+            }
+            return value.toFixed(1) + ' W';
+        }
+
+        function formatHourCurrency(value) {
+            if (typeof value !== 'number' || Number.isNaN(value) || value < 0) {
+                return 'N/D';
+            }
+            return value.toFixed(4) + ' EUR/h';
+        }
+
+        function formatMonthCurrency(value) {
+            if (typeof value !== 'number' || Number.isNaN(value) || value < 0) {
+                return 'Real acumulado del mes: N/D';
+            }
+            return 'Real acumulado del mes: ' + value.toFixed(2) + ' EUR';
+        }
+
+        function renderGpuUsage(stats) {
+            const gpuStats = stats.gpu_usage || {};
+            const entries = Array.isArray(gpuStats.entries) ? gpuStats.entries : [];
+
+            gpuUsageList.innerHTML = '';
+            if (!entries.length) {
+                const emptyMessage = document.createElement('div');
+                emptyMessage.className = 'stat-subvalue';
+                emptyMessage.textContent = 'No hay telemetria de GPU disponible en este host';
+                gpuUsageList.appendChild(emptyMessage);
+                return;
+            }
+
+            entries.forEach((gpu) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'gpu-item';
+
+                const label = document.createElement('div');
+                label.className = 'gpu-label';
+                label.innerHTML = '<span>' + (gpu.name || 'GPU') + '</span><strong>' + formatPercent(gpu.usage_percent) + '</strong>';
+
+                const bar = document.createElement('div');
+                bar.className = 'usage-bar';
+                const fill = document.createElement('span');
+                setUsageBar(fill, gpu.usage_percent);
+                bar.appendChild(fill);
+
+                wrapper.appendChild(label);
+                wrapper.appendChild(bar);
+                gpuUsageList.appendChild(wrapper);
+            });
+        }
+
+        function updateServiceTargets() {
+            const selectedHost = networkTargetSelect.value;
+            currentHostElement.textContent = selectedHost;
+
+            serviceLinks.forEach((link) => {
+                const port = link.dataset.port;
+                link.href = 'http://' + selectedHost + ':' + port;
+            });
+        }
+
+        async function loadSystemStats() {
+            try {
+                const response = await fetch('/dashboard/system-stats', { cache: 'no-store' });
+                if (!response.ok) {
+                    throw new Error('No se pudo leer estadisticas');
+                }
+
+                const stats = await response.json();
+
+                tempValue.textContent = typeof stats.temperature_c === 'number'
+                    ? stats.temperature_c.toFixed(1) + ' C'
+                    : 'N/D';
+                powerValue.textContent = formatPower(stats.power_w);
+                costValue.textContent = formatHourCurrency(stats.estimated_cost_per_hour_eur);
+                costDetail.textContent = formatMonthCurrency(stats.estimated_cost_month_to_date_eur);
+                uptimeValue.textContent = stats.uptime || 'N/D';
+
+                const battery = stats.battery || {};
+                const batteryPresent = !!battery.present;
+                if (batteryPresent) {
+                    batteryValue.textContent = typeof battery.capacity_percent === 'number'
+                        ? battery.capacity_percent.toFixed(0) + '%'
+                        : 'N/D';
+                    batteryDetail.textContent = 'Estado: ' + (battery.status || 'N/D');
+                    batteryHealthValue.textContent = typeof battery.health_percent === 'number'
+                        ? battery.health_percent.toFixed(1) + '%'
+                        : 'N/D';
+                    batteryPowerValue.textContent = typeof battery.power_w === 'number'
+                        ? 'Potencia: ' + battery.power_w.toFixed(2) + ' W'
+                        : 'Potencia: N/D';
+                } else {
+                    batteryValue.textContent = 'N/D';
+                    batteryDetail.textContent = 'Estado: sin bateria';
+                    batteryHealthValue.textContent = 'N/D';
+                    batteryPowerValue.textContent = 'Potencia: N/D';
+                }
+
+                cpuPercentLabel.textContent = formatPercent(stats.cpu_percent);
+                ramPercentLabel.textContent = formatPercent(stats.memory_percent);
+                diskPercentLabel.textContent = formatPercent(stats.disk_percent);
+
+                setUsageBar(cpuBar, stats.cpu_percent);
+                setUsageBar(ramBar, stats.memory_percent);
+                setUsageBar(diskBar, stats.disk_percent);
+                renderGpuUsage(stats);
+
+                const hostName = stats.hostname || 'desconocido';
+                const cores = typeof stats.cpu_cores === 'number' ? stats.cpu_cores : 0;
+                const tariff = typeof stats.energy_price_eur_per_kwh === 'number'
+                    ? stats.energy_price_eur_per_kwh.toFixed(3) + ' EUR/kWh'
+                    : 'N/D';
+                const powerSource = stats.power_source || 'unknown';
+                const now = new Date();
+                statsMeta.textContent = 'Host: ' + hostName + ' | Nucleos: ' + cores + ' | Tarifa: ' + tariff + ' | Potencia: ' + powerSource + ' | Actualizado: ' + now.toLocaleTimeString();
+            } catch (error) {
+                statsMeta.textContent = 'Error al actualizar estadisticas del sistema';
+            }
+        }
+
+        networkTargetSelect.addEventListener('change', updateServiceTargets);
+        updateServiceTargets();
+        loadSystemStats();
+        setInterval(loadSystemStats, 60 * 60 * 1000);
+    </script>
+</body>
+</html>
