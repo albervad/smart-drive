@@ -96,6 +96,74 @@ install_dependencies() {
     esac
 }
 
+has_intel_gpu() {
+    for vendor_file in /sys/class/drm/card*/device/vendor; do
+        if [[ ! -f "$vendor_file" ]]; then
+            continue
+        fi
+        if grep -qi "0x8086" "$vendor_file"; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+install_intel_gpu_tools() {
+    if ! has_intel_gpu; then
+        echo -e "${GREEN}>>> GPU Intel no detectada. Se omite intel-gpu-tools.${NC}"
+        return
+    fi
+
+    echo -e "${YELLOW}>>> Detectada GPU Intel. Intentando instalar herramientas de telemetria (intel_gpu_top)...${NC}"
+
+    case "$PKG_MANAGER" in
+        apt)
+            if ! apt-get install -y intel-gpu-tools; then
+                echo -e "${YELLOW}>>> No se pudo instalar intel-gpu-tools automaticamente (apt).${NC}"
+            fi
+            ;;
+        dnf)
+            if ! dnf -y install intel-gpu-tools; then
+                if ! dnf -y install igt-gpu-tools; then
+                    echo -e "${YELLOW}>>> No se pudo instalar intel-gpu-tools/igt-gpu-tools automaticamente (dnf).${NC}"
+                fi
+            fi
+            ;;
+        yum)
+            if ! yum -y install intel-gpu-tools; then
+                if ! yum -y install igt-gpu-tools; then
+                    echo -e "${YELLOW}>>> No se pudo instalar intel-gpu-tools/igt-gpu-tools automaticamente (yum).${NC}"
+                fi
+            fi
+            ;;
+        pacman)
+            if ! pacman -Sy --noconfirm intel-gpu-tools; then
+                echo -e "${YELLOW}>>> No se pudo instalar intel-gpu-tools automaticamente (pacman).${NC}"
+            fi
+            ;;
+        zypper)
+            if ! zypper --non-interactive install intel-gpu-tools; then
+                if ! zypper --non-interactive install igt-gpu-tools; then
+                    echo -e "${YELLOW}>>> No se pudo instalar intel-gpu-tools/igt-gpu-tools automaticamente (zypper).${NC}"
+                fi
+            fi
+            ;;
+        apk)
+            if ! apk add intel-gpu-tools; then
+                if ! apk add igt-gpu-tools; then
+                    echo -e "${YELLOW}>>> No se pudo instalar intel-gpu-tools/igt-gpu-tools automaticamente (apk).${NC}"
+                fi
+            fi
+            ;;
+    esac
+
+    if command -v intel_gpu_top >/dev/null 2>&1; then
+        echo -e "${GREEN}>>> intel_gpu_top disponible para metricas de GPU Intel en dashboard.${NC}"
+    else
+        echo -e "${YELLOW}>>> intel_gpu_top no esta disponible. El dashboard no mostrara uso de GPU Intel hasta instalarlo.${NC}"
+    fi
+}
+
 ensure_cron_service() {
     if ! command -v systemctl >/dev/null 2>&1; then
         echo -e "${YELLOW}>>> systemctl no disponible. Revisa manualmente el servicio de cron en tu sistema.${NC}"
@@ -118,6 +186,7 @@ ensure_cron_service() {
 # ---------------------------------------------------------
 echo -e "${YELLOW}[1/6] Actualizando sistema e instalando paquetes necesarios...${NC}"
 install_dependencies
+install_intel_gpu_tools
 
 # ---------------------------------------------------------
 # 2. CONFIGURACIÓN INTERACTIVA DE SWAP

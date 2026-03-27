@@ -106,6 +106,8 @@ Recomendación: mantener esta allowlist y revisar cada cambio de rutas antes de 
 - Python 3 y `git`.
 - Disco/pendrive montado en `/mnt/midrive`.
 
+La metrica de uso de GPU Intel en el dashboard se obtiene con `intel_gpu_top` (paquete `intel-gpu-tools` o `igt-gpu-tools` segun distro).
+
 ## 🧪 Sistemas operativos compatibles
 
 El instalador está preparado para ejecutarse en Linux con distintos gestores de paquetes y detecta la plataforma automáticamente:
@@ -143,6 +145,8 @@ Notas de compatibilidad:
    ```
 
 El instalador configura dependencias, entorno virtual, carpetas de datos, servicio `smartdrive` y limpieza diaria de temporales.
+
+En hosts con GPU Intel detectada, el instalador intenta instalar `intel-gpu-tools` para habilitar la metrica de GPU en dashboard.
 
 > Nota: el instalador usa `requirements.txt` para instalar dependencias Python.
 

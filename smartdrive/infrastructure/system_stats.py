@@ -201,34 +201,90 @@ def _estimate_power_watts(cpu_percent: float) -> float:
     return round(estimated_w, 2)
 
 
-def _intel_gpu_usage_from_drm() -> list[dict]:
-    entries: list[dict] = []
-    for card_path in sorted(glob.glob("/sys/class/drm/card*")):
-        card_name = os.path.basename(card_path)
-        if not re.fullmatch(r"card\d+", card_name):
+def _intel_gpu_usage_from_intel_gpu_top() -> list[dict]:
+    usage_raw = _intel_gpu_busy_percent_from_intel_gpu_top()
+    if usage_raw is None:
+        return []
+
+    return [{
+        "name": "Intel iGPU",
+        "usage_percent": max(0.0, min(100.0, usage_raw)),
+    }]
+
+
+def _intel_gpu_busy_percent_from_intel_gpu_top() -> float | None:
+    if shutil.which("intel_gpu_top") is None:
+        return None
+
+    command = ["intel_gpu_top", "-J", "-s", "120"]
+    raw_output = ""
+    try:
+        completed = subprocess.run(
+            command,
+            text=True,
+            capture_output=True,
+            stderr=subprocess.DEVNULL,
+            timeout=0.8,
+            check=False,
+        )
+        raw_output = completed.stdout or ""
+    except subprocess.TimeoutExpired as exc:
+        raw_output = exc.stdout or ""
+
+    if not raw_output:
+        return None
+
+    samples = _extract_json_dicts(raw_output)
+    for sample in reversed(samples):
+        busy = _intel_gpu_busy_from_intel_gpu_top_sample(sample)
+        if busy is not None:
+            return busy
+
+    return None
+
+
+def _extract_json_dicts(raw_output: str) -> list[dict]:
+    decoder = json.JSONDecoder()
+    parsed: list[dict] = []
+    start_index = 0
+
+    while start_index < len(raw_output):
+        json_start = raw_output.find("{", start_index)
+        if json_start == -1:
+            break
+
+        try:
+            payload, consumed = decoder.raw_decode(raw_output[json_start:])
+        except json.JSONDecodeError:
+            start_index = json_start + 1
             continue
 
-        device_path = os.path.join(card_path, "device")
-        if not os.path.isdir(device_path):
+        if isinstance(payload, dict):
+            parsed.append(payload)
+
+        start_index = json_start + consumed
+
+    return parsed
+
+
+def _intel_gpu_busy_from_intel_gpu_top_sample(sample: dict) -> float | None:
+    engines = sample.get("engines")
+    if not isinstance(engines, dict):
+        return None
+
+    busy_values: list[float] = []
+    for engine_data in engines.values():
+        if not isinstance(engine_data, dict):
             continue
+        busy = engine_data.get("busy")
+        if isinstance(busy, (int, float)):
+            busy_values.append(float(busy))
 
-        raw_vendor = (_read_text(os.path.join(device_path, "vendor")) or "").lower()
-        if raw_vendor != "0x8086":
-            continue
+    if not busy_values:
+        return None
 
-        usage_raw = _read_float(os.path.join(device_path, "gpu_busy_percent"))
-        if usage_raw is None:
-            usage_raw = _intel_gpu_freq_usage_percent(card_path)
-
-        if usage_raw is None:
-            continue
-
-        entries.append({
-            "name": f"Intel {card_name}",
-            "usage_percent": max(0.0, min(100.0, usage_raw)),
-        })
-
-    return entries
+    avg_busy = sum(busy_values) / len(busy_values)
+    return max(0.0, min(100.0, avg_busy))
 
 
 def _battery_metrics() -> dict:
@@ -269,7 +325,7 @@ def _battery_metrics() -> dict:
 
 
 def _gpu_usage() -> dict:
-    entries = _intel_gpu_usage_from_drm()
+    entries = _intel_gpu_usage_from_intel_gpu_top()
     intel_avg = 0.0
     if entries:
         intel_avg = sum(item["usage_percent"] for item in entries) / len(entries)
@@ -404,65 +460,6 @@ def _month_spend_until_now(
 
     month_spent_eur = closed_days_cost_eur + today_cost_eur
     return month_spent_eur, today_cost_eur, closed_days_cost_eur
-
-
-def _intel_gpu_freq_usage_percent(card_path: str) -> float | None:
-    rc6_usage = _intel_gpu_busy_percent_from_rc6(card_path)
-
-    gt0_path = os.path.join(card_path, "gt", "gt0")
-
-    current_freq = _read_float(os.path.join(gt0_path, "rps_cur_freq_mhz"))
-    if current_freq is None:
-        current_freq = _read_float(os.path.join(gt0_path, "rps_act_freq_mhz"))
-    if current_freq is None:
-        current_freq = _read_float(os.path.join(card_path, "gt_act_freq_mhz"))
-
-    min_freq = _read_float(os.path.join(gt0_path, "rps_RPn_freq_mhz"))
-    max_freq = _read_float(os.path.join(gt0_path, "rps_RP0_freq_mhz"))
-
-    if min_freq is None:
-        min_freq = _read_float(os.path.join(gt0_path, "rps_min_freq_mhz"))
-    if max_freq is None:
-        max_freq = _read_float(os.path.join(gt0_path, "rps_max_freq_mhz"))
-
-    if current_freq is None or min_freq is None or max_freq is None:
-        return None
-
-    if max_freq <= min_freq:
-        return rc6_usage
-
-    percent = ((current_freq - min_freq) / (max_freq - min_freq)) * 100.0
-    freq_usage = max(0.0, min(100.0, percent))
-
-    if rc6_usage is None:
-        return freq_usage
-
-    return max(freq_usage, rc6_usage)
-
-
-def _intel_gpu_busy_percent_from_rc6(card_path: str) -> float | None:
-    rc6_path = os.path.join(card_path, "gt", "gt0", "rc6_residency_ms")
-
-    first = _read_float(rc6_path)
-    if first is None:
-        return None
-
-    start_time = time.monotonic()
-    time.sleep(0.12)
-    second = _read_float(rc6_path)
-    end_time = time.monotonic()
-
-    if second is None:
-        return None
-
-    elapsed_ms = (end_time - start_time) * 1000.0
-    if elapsed_ms <= 0:
-        return None
-
-    rc6_delta = max(0.0, second - first)
-    idle_ratio = min(1.0, rc6_delta / elapsed_ms)
-    busy_ratio = 1.0 - idle_ratio
-    return max(0.0, min(100.0, busy_ratio * 100.0))
 
 
 def _power_watts_from_rapl() -> float | None:
