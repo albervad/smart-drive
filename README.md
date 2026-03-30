@@ -2,7 +2,12 @@
 
 Proyecto de web personal con frontend web y backend FastAPI, diseñado con enfoque en **seguridad defensiva aplicada**: validación de rutas, control de superficie de búsqueda de contenido y despliegue seguro sin exponer puertos.
 
-<img width="735" height="875" alt="image" src="https://github.com/user-attachments/assets/560fe466-ab5e-42f8-bfa2-d57f9930c62e" />
+<img width="1874" height="921" alt="image" src="https://github.com/user-attachments/assets/2c68bc8e-df0c-4c71-ac89-945f049241aa" />
+<img width="1856" height="922" alt="image" src="https://github.com/user-attachments/assets/6441ce17-93fd-42b0-8043-ed325f7f3305" />
+<img width="1872" height="917" alt="image" src="https://github.com/user-attachments/assets/d50e3108-e7ce-481e-b111-279776226d9d" />
+<img width="1871" height="921" alt="image" src="https://github.com/user-attachments/assets/a4d22c7e-e6f8-4d94-8707-5f5278a589a0" />
+<img width="1866" height="915" alt="image" src="https://github.com/user-attachments/assets/ce3f7b16-e11e-4dd2-a3ae-4f7bb2785209" />
+
 
 
 ## 🎯 Objetivo del proyecto
