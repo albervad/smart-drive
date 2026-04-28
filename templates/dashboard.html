@@ -141,7 +141,8 @@
             gap: 10px;
         }
 
-        .service-link {
+        .service-link,
+        .shortcut-link {
             display: grid;
             gap: 6px;
             text-decoration: none;
@@ -153,17 +154,20 @@
             transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
         }
 
-        .service-link:hover {
+        .service-link:hover,
+        .shortcut-link:hover {
             transform: translateY(-2px);
             border-color: var(--accent);
             background: rgba(92, 167, 255, 0.16);
         }
 
-        .service-link strong {
+        .service-link strong,
+        .shortcut-link strong {
             font-size: 0.95rem;
         }
 
-        .service-link span {
+        .service-link span,
+        .shortcut-link span {
             color: var(--text-muted);
             font-size: 0.8rem;
         }
@@ -340,45 +344,69 @@
 
             <p class="stats-meta" id="stats-meta">Actualizando estadisticas...</p>
         </section>
+                <section class="panel" aria-labelledby="external-shortcuts-title">
+                    <h2 id="external-shortcuts-title" class="section-title">Atajos externos</h2>
+                    <div class="grid" id="external-shortcuts-grid">
+                        <a class="shortcut-link" data-fixed-url="https://cvdof.ucm.es/moodle/my/courses.php" href="https://cvdof.ucm.es/moodle/my/courses.php" target="_blank" rel="noopener">
+                            <strong>Campus Virtual</strong>
+                            <span>Moodle UCM</span>
+                        </a>
+                        <a class="shortcut-link" data-fixed-url="https://www.youtube.com/" href="https://www.youtube.com/" target="_blank" rel="noopener">
+                            <strong>YouTube</strong>
+                            <span>Plataforma de video</span>
+                        </a>
+                        <a class="shortcut-link" data-fixed-url="https://drive.google.com/" href="https://drive.google.com/" target="_blank" rel="noopener">
+                            <strong>Google Drive</strong>
+                            <span>Archivos en la nube</span>
+                        </a>
+                        <a class="shortcut-link" data-fixed-url="https://mail.google.com/" href="https://mail.google.com/" target="_blank" rel="noopener">
+                            <strong>Gmail</strong>
+                            <span>Correo de Google</span>
+                        </a>
+                        <a class="shortcut-link" data-fixed-url="https://calendar.google.com/" href="https://calendar.google.com/" target="_blank" rel="noopener">
+                            <strong>Google Calendar</strong>
+                            <span>Agenda y recordatorios</span>
+                        </a>
+                    </div>
+                </section>
 
+                <section class="panel" aria-labelledby="services-title">
+                    <h2 id="services-title" class="section-title">Aplicaciones multimedia</h2>
+                    <div class="grid" id="services-grid">
+                        <a class="service-link" data-port="" data-fixed-url="https://seerr.bertolt.dev" href="https://seerr.bertolt.dev" target="_blank" rel="noopener">
+                            <strong>Seerr</strong>
+                        </a>
+                        <a class="service-link" data-port="8096" href="http://192.168.1.47:8096" target="_blank" rel="noopener">
+                            <strong>Jellyfin</strong>
+                            <span>Puerto 8096</span>
+                        </a>
+                        <a class="service-link" data-port="7878" href="http://192.168.1.47:7878" target="_blank" rel="noopener">
+                            <strong>Radarr</strong>
+                            <span>Puerto 7878</span>
+                        </a>
+                        <a class="service-link" data-port="8989" href="http://192.168.1.47:8989" target="_blank" rel="noopener">
+                            <strong>Sonarr</strong>
+                            <span>Puerto 8989</span>
+                        </a>
+                        <a class="service-link" data-port="9117" href="http://192.168.1.47:9117" target="_blank" rel="noopener">
+                            <strong>Jackett</strong>
+                            <span>Puerto 9117</span>
+                        </a>
+                        <a class="service-link" data-port="8080" href="http://192.168.1.47:8080" target="_blank" rel="noopener">
+                            <strong>qBittorrent</strong>
+                            <span>Puerto 8080</span>
+                        </a>
+                    </div>
+                </section>
         <section class="panel" aria-labelledby="environment-title">
             <h2 id="environment-title" class="section-title">Entorno de conexion</h2>
             <div class="selector-row">
                 <label for="network-target">Selecciona red destino:</label>
                 <select id="network-target">
                     <option value="192.168.1.47" selected>Local (192.168.1.47)</option>
-                    <option value="199.68.161.18">Remota (199.68.161.18)</option>
+                    <option value="100.68.161.18">Remota (100.68.161.18)</option>
                 </select>
                 <span class="current-target">Host activo: <strong id="current-host">192.168.1.47</strong></span>
-            </div>
-        </section>
-
-        <section class="panel" aria-labelledby="services-title">
-            <h2 id="services-title" class="section-title">Aplicaciones multimedia</h2>
-            <div class="grid" id="services-grid">
-                <a class="service-link" data-port="" data-fixed-url="https://seerr.bertolt.dev" href="https://seerr.bertolt.dev" target="_blank" rel="noopener">
-                    <strong>Seerr</strong>
-                </a>
-                <a class="service-link" data-port="8096" href="http://192.168.1.47:8096" target="_blank" rel="noopener">
-                    <strong>Jellyfin</strong>
-                    <span>Puerto 8096</span>
-                </a>
-                <a class="service-link" data-port="7878" href="http://192.168.1.47:7878" target="_blank" rel="noopener">
-                    <strong>Radarr</strong>
-                    <span>Puerto 7878</span>
-                </a>
-                <a class="service-link" data-port="8989" href="http://192.168.1.47:8989" target="_blank" rel="noopener">
-                    <strong>Sonarr</strong>
-                    <span>Puerto 8989</span>
-                </a>
-                <a class="service-link" data-port="9117" href="http://192.168.1.47:9117" target="_blank" rel="noopener">
-                    <strong>Jackett</strong>
-                    <span>Puerto 9117</span>
-                </a>
-                <a class="service-link" data-port="8080" href="http://192.168.1.47:8080" target="_blank" rel="noopener">
-                    <strong>qBittorrent</strong>
-                    <span>Puerto 8080</span>
-                </a>
             </div>
         </section>
     </main>
